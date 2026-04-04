@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { mealPlanAPI, recipeAPI } from "../services/api";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Package, Copy, Download, Mail, Share2, Check, X, GripVertical } from "lucide-react";
+import { Package, Copy, Download, Mail, Share2, Check, X, GripVertical, Clock, Users } from "lucide-react";
 import { Link } from "react-router";
 import { MealPlan, Recipe, Ingredient } from "../types";
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 
@@ -488,6 +489,30 @@ export function GroceryList() {
     return plan.meals.map((meal) => recipeMap.get(meal.recipeId)?.name || "Unknown Recipe").join(", ");
   }, [selectedPlanId, mealPlans, recipeMap]);
 
+  const menuRecipes = useMemo(() => {
+    if (!selectedPlanId) return { meals: [], snacks: [] };
+    const plan = mealPlans.find((p) => p.id === selectedPlanId);
+    if (!plan) return { meals: [], snacks: [] };
+
+    const seen = new Set<string>();
+    const meals: { recipe: typeof recipeMap extends Map<string, infer V> ? V : never; mealType?: string }[] = [];
+    const snacks: { recipe: typeof recipeMap extends Map<string, infer V> ? V : never }[] = [];
+
+    plan.meals.forEach((meal) => {
+      if (seen.has(meal.recipeId)) return;
+      seen.add(meal.recipeId);
+      const recipe = recipeMap.get(meal.recipeId);
+      if (!recipe) return;
+      if (recipe.category === 'snack' || recipe.category === 'dessert') {
+        snacks.push({ recipe });
+      } else {
+        meals.push({ recipe, mealType: meal.mealType });
+      }
+    });
+
+    return { meals, snacks };
+  }, [selectedPlanId, mealPlans, recipeMap]);
+
   const formatGroceryListText = () => {
     const selectedPlan = mealPlans.find((p) => p.id === selectedPlanId);
     const planName = selectedPlan?.name || "Meal Plan";
@@ -707,57 +732,10 @@ export function GroceryList() {
   return (
     <DndProvider backend={HTML5Backend}>
     <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 py-12">
-      {/* Header with action icons */}
-      <div className="mb-10">
-        <div className="flex items-start justify-between mb-2">
-          <h1 className="text-3xl font-semibold text-foreground">Grocery List</h1>
-          
-          {/* Action Icons */}
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={copyToClipboard}
-              className="h-9 w-9 text-muted-foreground hover:text-foreground"
-              title="Copy to clipboard"
-            >
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={downloadAsText}
-              className="h-9 w-9 text-muted-foreground hover:text-foreground"
-              title="Download as text"
-            >
-              <Download className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={shareViaEmail}
-              className="h-9 w-9 text-muted-foreground hover:text-foreground"
-              title="Share via email"
-            >
-              <Mail className="w-4 h-4" />
-            </Button>
-            {navigator.share && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={shareViaWebShare}
-                className="h-9 w-9 text-muted-foreground hover:text-foreground"
-                title="Share"
-              >
-                <Share2 className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {/* Meal Plan Dropdown */}
+      {/* Header */}
       <div className="mb-6">
+        <h1 className="text-3xl font-semibold text-foreground mb-6">Meal Plan</h1>
         <Select value={selectedPlanId || undefined} onValueChange={setSelectedPlanId}>
           <SelectTrigger className="w-full border-border/50">
             <SelectValue placeholder="Select a meal plan" />
@@ -772,75 +750,185 @@ export function GroceryList() {
         </Select>
       </div>
 
-      {/* Recipe List */}
-      {selectedPlanId && recipeNames && (
-        <div className="mb-8">
-          <p className="text-sm text-muted-foreground">
-            {recipeNames}
-          </p>
-        </div>
-      )}
+      <Tabs defaultValue="menu">
+        <TabsList className="mb-6">
+          <TabsTrigger value="menu">Menu</TabsTrigger>
+          <TabsTrigger value="grocery">Grocery List</TabsTrigger>
+        </TabsList>
 
-      {/* Grocery List by Category */}
-      <div className="space-y-8">
-        <div className="text-sm font-medium text-muted-foreground mb-4">
-          {totalItems} {totalItems === 1 ? 'item' : 'items'}
-        </div>
+        {/* ── MENU TAB ── */}
+        <TabsContent value="menu">
+          {menuRecipes.meals.length === 0 && menuRecipes.snacks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No recipes in this plan.</p>
+          ) : (
+            <div className="space-y-12">
 
-        {Object.entries(categorizedList).map(([category, items]) => {
-          if (items.length === 0 || removedCategories.has(category)) return null;
+              {/* Meals */}
+              {menuRecipes.meals.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-4 mb-6">
+                    <h2 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">Meals</h2>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                  <div className="space-y-0 divide-y divide-border/50">
+                    {menuRecipes.meals.map(({ recipe, mealType }) => (
+                      <div key={recipe.id} className="py-5 flex justify-between gap-6">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start gap-2 mb-1">
+                            <h3 className="font-semibold text-foreground leading-snug">{recipe.name}</h3>
+                            {mealType && (
+                              <span className="mt-0.5 text-[10px] font-medium uppercase tracking-wide px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
+                                {mealType}
+                              </span>
+                            )}
+                          </div>
+                          {recipe.cuisineTypes && recipe.cuisineTypes.length > 0 && (
+                            <p className="text-xs text-muted-foreground mb-2 italic">
+                              {recipe.cuisineTypes.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(", ")}
+                            </p>
+                          )}
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {recipe.ingredients.slice(0, 6).map(i => i.name).join(", ")}
+                            {recipe.ingredients.length > 6 && ` +${recipe.ingredients.length - 6} more`}
+                          </p>
+                          {recipe.notes && (
+                            <p className="text-xs text-muted-foreground/70 mt-2 italic">{recipe.notes}</p>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-1.5 shrink-0 text-xs text-muted-foreground">
+                          {recipe.cookingTime > 0 && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />{recipe.cookingTime}m
+                            </span>
+                          )}
+                          {recipe.servings > 0 && (
+                            <span className="flex items-center gap-1">
+                              <Users className="w-3 h-3" />{recipe.servings}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          return (
-            <div key={category}>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-foreground">
-                  {categoryNames[category]}
-                </h2>
-                {category === "spices" && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeCategory(category)}
-                    className="h-8 text-xs text-muted-foreground hover:text-destructive"
-                  >
-                    <X className="w-3.5 h-3.5 mr-1.5" />
-                    Remove all spices
-                  </Button>
-                )}
-              </div>
-              <DroppableCategory category={category} onDrop={moveIngredient}>
+              {/* Snacks & Desserts */}
+              {menuRecipes.snacks.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-4 mb-6">
+                    <h2 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">Snacks & Desserts</h2>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                  <div className="space-y-0 divide-y divide-border/50">
+                    {menuRecipes.snacks.map(({ recipe }) => (
+                      <div key={recipe.id} className="py-5 flex justify-between gap-6">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-foreground leading-snug mb-1">{recipe.name}</h3>
+                          {recipe.cuisineTypes && recipe.cuisineTypes.length > 0 && (
+                            <p className="text-xs text-muted-foreground mb-2 italic">
+                              {recipe.cuisineTypes.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(", ")}
+                            </p>
+                          )}
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {recipe.ingredients.slice(0, 6).map(i => i.name).join(", ")}
+                            {recipe.ingredients.length > 6 && ` +${recipe.ingredients.length - 6} more`}
+                          </p>
+                          {recipe.notes && (
+                            <p className="text-xs text-muted-foreground/70 mt-2 italic">{recipe.notes}</p>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-1.5 shrink-0 text-xs text-muted-foreground">
+                          {recipe.cookingTime > 0 && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />{recipe.cookingTime}m
+                            </span>
+                          )}
+                          {recipe.servings > 0 && (
+                            <span className="flex items-center gap-1">
+                              <Users className="w-3 h-3" />{recipe.servings}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ── GROCERY LIST TAB ── */}
+        <TabsContent value="grocery">
+          <div className="flex items-center justify-between mb-6">
+            <span className="text-sm font-medium text-muted-foreground">
+              {totalItems} {totalItems === 1 ? 'item' : 'items'}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" onClick={copyToClipboard} className="h-9 w-9 text-muted-foreground hover:text-foreground" title="Copy to clipboard">
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              </Button>
+              <Button variant="ghost" size="icon" onClick={downloadAsText} className="h-9 w-9 text-muted-foreground hover:text-foreground" title="Download as text">
+                <Download className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={shareViaEmail} className="h-9 w-9 text-muted-foreground hover:text-foreground" title="Share via email">
+                <Mail className="w-4 h-4" />
+              </Button>
+              {navigator.share && (
+                <Button variant="ghost" size="icon" onClick={shareViaWebShare} className="h-9 w-9 text-muted-foreground hover:text-foreground" title="Share">
+                  <Share2 className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-8">
+            {Object.entries(categorizedList).map(([category, items]) => {
+              if (items.length === 0 || removedCategories.has(category)) return null;
+              return (
+                <div key={category}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-foreground">{categoryNames[category]}</h2>
+                    {category === "spices" && (
+                      <Button variant="ghost" size="sm" onClick={() => removeCategory(category)} className="h-8 text-xs text-muted-foreground hover:text-destructive">
+                        <X className="w-3.5 h-3.5 mr-1.5" />Remove all spices
+                      </Button>
+                    )}
+                  </div>
+                  <DroppableCategory category={category} onDrop={moveIngredient}>
+                    <Card className="border-border/50">
+                      <CardContent className="p-6">
+                        <div className="space-y-2">
+                          {items.map((item) => (
+                            <DraggableIngredient
+                              key={item.name}
+                              item={item}
+                              isChecked={checkedIngredients.has(item.name.toLowerCase())}
+                              onToggleCheck={toggleIngredientCheck}
+                              onRemove={removeIngredient}
+                            />
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </DroppableCategory>
+                </div>
+              );
+            })}
+
+            {totalItems === 0 && (
               <Card className="border-border/50">
-                <CardContent className="p-6">
-                  <div className="space-y-2">{items.map((item, index) => {
-                      const isChecked = checkedIngredients.has(item.name.toLowerCase());
-                      
-                      return (
-                      <DraggableIngredient
-                        key={item.name}
-                        item={item}
-                        isChecked={isChecked}
-                        onToggleCheck={toggleIngredientCheck}
-                        onRemove={removeIngredient}
-                      />
-                      );
-                    })}</div>
+                <CardContent className="py-12 text-center">
+                  <p className="text-sm text-muted-foreground">No ingredients in this meal plan</p>
                 </CardContent>
               </Card>
-              </DroppableCategory>
-            </div>
-          );
-        })}
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
 
-        {totalItems === 0 && (
-          <Card className="border-border/50">
-            <CardContent className="py-12 text-center">
-              <p className="text-sm text-muted-foreground">
-                No ingredients in this meal plan
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
     </div>
     </DndProvider>
   );
