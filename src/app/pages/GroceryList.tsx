@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { mealPlanAPI, recipeAPI } from "../services/api";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Package, Copy, Download, Mail, Share2, Check, Loader2, X, GripVertical } from "lucide-react";
+import { Package, Copy, Download, Mail, Share2, Check, X, GripVertical } from "lucide-react";
 import { Link } from "react-router";
 import { MealPlan, Recipe, Ingredient } from "../types";
 import { toast } from "sonner";
@@ -633,11 +633,22 @@ export function GroceryList() {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-16">
-        <div className="flex flex-col items-center justify-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-          <p className="text-sm text-muted-foreground">Loading grocery list...</p>
+      <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 py-12">
+        <div className="mb-10">
+          <div className="h-9 w-48 bg-muted/60 rounded-lg animate-pulse mb-2" />
+          <div className="h-4 w-64 bg-muted/40 rounded animate-pulse" />
         </div>
+        <div className="h-10 w-full bg-muted/40 rounded-lg animate-pulse mb-8" />
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="mb-8">
+            <div className="h-6 w-32 bg-muted/60 rounded animate-pulse mb-4" />
+            <div className="rounded-xl border border-border/50 p-6 space-y-3">
+              {[1, 2, 3, 4].map((j) => (
+                <div key={j} className="h-10 w-full bg-muted/40 rounded-lg animate-pulse" />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     );
   }

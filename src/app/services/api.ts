@@ -7,7 +7,19 @@ const API_BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const EXTRACTION_TIMEOUT = 45000; // 45 seconds for extraction (OCR can take time)
 
+// In-memory cache for GET requests — cleared on any mutation
+const cache = new Map<string, unknown>();
+
+function invalidateCache() {
+  cache.clear();
+}
+
 async function fetchAPI(endpoint: string, options: RequestInit = {}, timeoutMs: number = DEFAULT_TIMEOUT) {
+  const isGet = !options.method || options.method === 'GET';
+
+  if (isGet && cache.has(endpoint)) {
+    return cache.get(endpoint);
+  }
   const url = `${API_BASE_URL}${endpoint}`;
   const headers = {
     'Content-Type': 'application/json',
@@ -41,6 +53,8 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}, timeoutMs: 
 
     const result = await response.json();
     console.log(`[API] Success response:`, result);
+    if (isGet) cache.set(endpoint, result);
+    else invalidateCache();
     return result;
   } catch (error: any) {
     clearTimeout(timeoutId);
