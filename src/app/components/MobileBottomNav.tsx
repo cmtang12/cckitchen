@@ -1,13 +1,11 @@
 import React from "react";
-import { Link, useLocation, useNavigate } from "react-router";
-import { logout } from "../utils/auth";
+import { Link, useLocation } from "react-router";
 import {
   BookOpen,
   Plus,
   Calendar,
   ShoppingBasket,
   BarChart3,
-  LogOut
 } from "lucide-react";
 
 interface NavItem {
@@ -26,12 +24,6 @@ const navItems: NavItem[] = [
 
 export function MobileBottomNav() {
   const location = useLocation();
-  const navigate = useNavigate();
-
-  async function handleLogout() {
-    await logout();
-    navigate("/login");
-  }
 
   const isActive = (path: string) => {
     if (path === "/") {
@@ -115,14 +107,6 @@ export function MobileBottomNav() {
               </Link>
             );
           })}
-          {/* Logout */}
-          <button
-            onClick={handleLogout}
-            className="flex flex-col items-center gap-1 py-2 text-muted-foreground"
-          >
-            <LogOut className="w-5 h-5 stroke-[2]" />
-            <span className="text-xs font-medium">Logout</span>
-          </button>
         </div>
       </div>
     </nav>

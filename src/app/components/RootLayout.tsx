@@ -43,10 +43,10 @@ export function RootLayout() {
         </Link>
       </div>
 
-      {/* Logout Button - desktop only (mobile uses bottom nav area) */}
+      {/* Logout Button */}
       <button
         onClick={handleLogout}
-        className="hidden md:block fixed top-4 right-4 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors z-50"
+        className="fixed top-4 right-4 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors z-50"
         title="Logout"
       >
         <LogOut className="w-4 h-4" />
