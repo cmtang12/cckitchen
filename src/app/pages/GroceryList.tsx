@@ -489,6 +489,8 @@ export function GroceryList() {
     return plan.meals.map((meal) => recipeMap.get(meal.recipeId)?.name || "Unknown Recipe").join(", ");
   }, [selectedPlanId, mealPlans, recipeMap]);
 
+  const DRINK_KEYWORDS = ['smoothie', 'juice', 'shake', 'drink', 'beverage', 'latte', 'coffee', 'tea', 'matcha', 'lemonade', 'milk'];
+
   const menuRecipes = useMemo(() => {
     if (!selectedPlanId) return { meals: [], snacks: [] };
     const plan = mealPlans.find((p) => p.id === selectedPlanId);
@@ -503,7 +505,9 @@ export function GroceryList() {
       seen.add(meal.recipeId);
       const recipe = recipeMap.get(meal.recipeId);
       if (!recipe) return;
-      if (recipe.category === 'snack' || recipe.category === 'dessert') {
+      const nameLower = recipe.name.toLowerCase();
+      const isDrink = DRINK_KEYWORDS.some(k => nameLower.includes(k));
+      if (recipe.category === 'snack' || recipe.category === 'dessert' || isDrink) {
         snacks.push({ recipe });
       } else {
         meals.push({ recipe, mealType: meal.mealType });
@@ -772,10 +776,19 @@ export function GroceryList() {
                   </div>
                   <div className="space-y-0 divide-y divide-border/50">
                     {menuRecipes.meals.map(({ recipe, mealType }) => (
-                      <div key={recipe.id} className="py-5 flex justify-between gap-6">
+                      <div key={recipe.id} className="py-5 flex gap-4">
+                        {recipe.image && (
+                          <img
+                            src={recipe.image}
+                            alt={recipe.name}
+                            className="w-20 h-20 rounded-lg object-cover shrink-0"
+                          />
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start gap-2 mb-1">
-                            <h3 className="font-semibold text-foreground leading-snug">{recipe.name}</h3>
+                            <Link to={`/recipes/${recipe.id}`} className="font-semibold text-foreground leading-snug hover:text-primary transition-colors">
+                              {recipe.name}
+                            </Link>
                             {mealType && (
                               <span className="mt-0.5 text-[10px] font-medium uppercase tracking-wide px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
                                 {mealType}
@@ -794,18 +807,14 @@ export function GroceryList() {
                           {recipe.notes && (
                             <p className="text-xs text-muted-foreground/70 mt-2 italic">{recipe.notes}</p>
                           )}
-                        </div>
-                        <div className="flex flex-col items-end gap-1.5 shrink-0 text-xs text-muted-foreground">
-                          {recipe.cookingTime > 0 && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />{recipe.cookingTime}m
-                            </span>
-                          )}
-                          {recipe.servings > 0 && (
-                            <span className="flex items-center gap-1">
-                              <Users className="w-3 h-3" />{recipe.servings}
-                            </span>
-                          )}
+                          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                            {recipe.cookingTime > 0 && (
+                              <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{recipe.cookingTime}m</span>
+                            )}
+                            {recipe.servings > 0 && (
+                              <span className="flex items-center gap-1"><Users className="w-3 h-3" />{recipe.servings} servings</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -813,18 +822,27 @@ export function GroceryList() {
                 </div>
               )}
 
-              {/* Snacks & Desserts */}
+              {/* Snacks, Drinks & Desserts */}
               {menuRecipes.snacks.length > 0 && (
                 <div>
                   <div className="flex items-center gap-4 mb-6">
-                    <h2 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">Snacks & Desserts</h2>
+                    <h2 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">Snacks, Drinks & Desserts</h2>
                     <div className="flex-1 h-px bg-border" />
                   </div>
                   <div className="space-y-0 divide-y divide-border/50">
                     {menuRecipes.snacks.map(({ recipe }) => (
-                      <div key={recipe.id} className="py-5 flex justify-between gap-6">
+                      <div key={recipe.id} className="py-5 flex gap-4">
+                        {recipe.image && (
+                          <img
+                            src={recipe.image}
+                            alt={recipe.name}
+                            className="w-20 h-20 rounded-lg object-cover shrink-0"
+                          />
+                        )}
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-foreground leading-snug mb-1">{recipe.name}</h3>
+                          <Link to={`/recipes/${recipe.id}`} className="font-semibold text-foreground leading-snug hover:text-primary transition-colors mb-1 block">
+                            {recipe.name}
+                          </Link>
                           {recipe.cuisineTypes && recipe.cuisineTypes.length > 0 && (
                             <p className="text-xs text-muted-foreground mb-2 italic">
                               {recipe.cuisineTypes.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(", ")}
@@ -837,18 +855,14 @@ export function GroceryList() {
                           {recipe.notes && (
                             <p className="text-xs text-muted-foreground/70 mt-2 italic">{recipe.notes}</p>
                           )}
-                        </div>
-                        <div className="flex flex-col items-end gap-1.5 shrink-0 text-xs text-muted-foreground">
-                          {recipe.cookingTime > 0 && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />{recipe.cookingTime}m
-                            </span>
-                          )}
-                          {recipe.servings > 0 && (
-                            <span className="flex items-center gap-1">
-                              <Users className="w-3 h-3" />{recipe.servings}
-                            </span>
-                          )}
+                          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                            {recipe.cookingTime > 0 && (
+                              <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{recipe.cookingTime}m</span>
+                            )}
+                            {recipe.servings > 0 && (
+                              <span className="flex items-center gap-1"><Users className="w-3 h-3" />{recipe.servings} servings</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
