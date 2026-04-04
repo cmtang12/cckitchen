@@ -7,18 +7,40 @@ const API_BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const EXTRACTION_TIMEOUT = 45000; // 45 seconds for extraction (OCR can take time)
 
-// In-memory cache for GET requests — cleared on any mutation
-const cache = new Map<string, unknown>();
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const CACHE_PREFIX = 'cck_cache_';
+
+// In-memory layer (fastest, cleared on mutation)
+const memCache = new Map<string, unknown>();
+
+function readCache(endpoint: string): unknown | null {
+  if (memCache.has(endpoint)) return memCache.get(endpoint);
+  try {
+    const raw = localStorage.getItem(CACHE_PREFIX + endpoint);
+    if (!raw) return null;
+    const { data, ts } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL) { localStorage.removeItem(CACHE_PREFIX + endpoint); return null; }
+    memCache.set(endpoint, data);
+    return data;
+  } catch { return null; }
+}
+
+function writeCache(endpoint: string, data: unknown) {
+  memCache.set(endpoint, data);
+  try { localStorage.setItem(CACHE_PREFIX + endpoint, JSON.stringify({ data, ts: Date.now() })); } catch {}
+}
 
 function invalidateCache() {
-  cache.clear();
+  memCache.clear();
+  Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX)).forEach(k => localStorage.removeItem(k));
 }
 
 async function fetchAPI(endpoint: string, options: RequestInit = {}, timeoutMs: number = DEFAULT_TIMEOUT) {
   const isGet = !options.method || options.method === 'GET';
 
-  if (isGet && cache.has(endpoint)) {
-    return cache.get(endpoint);
+  if (isGet) {
+    const cached = readCache(endpoint);
+    if (cached !== null) return cached;
   }
   const url = `${API_BASE_URL}${endpoint}`;
   const headers = {
@@ -53,7 +75,7 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}, timeoutMs: 
 
     const result = await response.json();
     console.log(`[API] Success response:`, result);
-    if (isGet) cache.set(endpoint, result);
+    if (isGet) writeCache(endpoint, result);
     else invalidateCache();
     return result;
   } catch (error: any) {
