@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { mealPlanAPI, recipeAPI } from "../services/api";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -380,6 +380,11 @@ export function GroceryList() {
     }
   };
 
+  const recipeMap = useMemo(
+    () => new Map(recipes.map((r) => [r.id, r])),
+    [recipes]
+  );
+
   const generateGroceryList = (): Record<string, CategorizedIngredient[]> => {
     if (!selectedPlanId) return {};
 
@@ -390,7 +395,7 @@ export function GroceryList() {
     const ingredientMap = new Map<string, CategorizedIngredient>();
 
     plan.meals.forEach((meal) => {
-      const recipe = recipes.find((r) => r.id === meal.recipeId);
+      const recipe = recipeMap.get(meal.recipeId);
       if (recipe) {
         recipe.ingredients.forEach((ing) => {
           const key = ing.name.toLowerCase();
@@ -457,8 +462,15 @@ export function GroceryList() {
     toast.success(`Moved ${ingredientName} to ${categoryNames[targetCategory]}`);
   };
 
-  const categorizedList = generateGroceryList();
-  const totalItems = Object.values(categorizedList).reduce((sum, items) => sum + items.length, 0);
+  const categorizedList = useMemo(
+    () => generateGroceryList(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedPlanId, mealPlans, recipeMap, categoryOverrides, removedIngredients]
+  );
+  const totalItems = useMemo(
+    () => Object.values(categorizedList).reduce((sum, items) => sum + items.length, 0),
+    [categorizedList]
+  );
 
   const formatGroceryListText = () => {
     const selectedPlan = mealPlans.find((p) => p.id === selectedPlanId);
@@ -674,18 +686,12 @@ export function GroceryList() {
   };
 
   // Get recipe names from selected plan
-  const getRecipeNames = (): string => {
+  const recipeNames = useMemo((): string => {
     if (!selectedPlanId) return "";
     const plan = mealPlans.find((p) => p.id === selectedPlanId);
     if (!plan) return "";
-    
-    const recipeNames = plan.meals.map((meal) => {
-      const recipe = recipes.find((r) => r.id === meal.recipeId);
-      return recipe?.name || "Unknown Recipe";
-    });
-    
-    return recipeNames.join(", ");
-  };
+    return plan.meals.map((meal) => recipeMap.get(meal.recipeId)?.name || "Unknown Recipe").join(", ");
+  }, [selectedPlanId, mealPlans, recipeMap]);
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -756,10 +762,10 @@ export function GroceryList() {
       </div>
 
       {/* Recipe List */}
-      {selectedPlanId && getRecipeNames() && (
+      {selectedPlanId && recipeNames && (
         <div className="mb-8">
           <p className="text-sm text-muted-foreground">
-            {getRecipeNames()}
+            {recipeNames}
           </p>
         </div>
       )}
@@ -799,7 +805,7 @@ export function GroceryList() {
                       
                       return (
                       <DraggableIngredient
-                        key={index}
+                        key={item.name}
                         item={item}
                         isChecked={isChecked}
                         onToggleCheck={toggleIngredientCheck}
