@@ -462,6 +462,15 @@ export function GroceryList() {
     toast.success(`Moved ${ingredientName} to ${categoryNames[targetCategory]}`);
   };
 
+  const categoryNames: Record<string, string> = {
+    produce: "Produce",
+    meat: "Meat & Seafood",
+    dairy: "Dairy & Eggs",
+    frozen: "Frozen",
+    spices: "Spices",
+    pantry: "Pantry & Other"
+  };
+
   const categorizedList = useMemo(
     () => generateGroceryList(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -471,6 +480,13 @@ export function GroceryList() {
     () => Object.values(categorizedList).reduce((sum, items) => sum + items.length, 0),
     [categorizedList]
   );
+
+  const recipeNames = useMemo((): string => {
+    if (!selectedPlanId) return "";
+    const plan = mealPlans.find((p) => p.id === selectedPlanId);
+    if (!plan) return "";
+    return plan.meals.map((meal) => recipeMap.get(meal.recipeId)?.name || "Unknown Recipe").join(", ");
+  }, [selectedPlanId, mealPlans, recipeMap]);
 
   const formatGroceryListText = () => {
     const selectedPlan = mealPlans.find((p) => p.id === selectedPlanId);
@@ -687,22 +703,6 @@ export function GroceryList() {
     );
   }
 
-  const categoryNames: Record<string, string> = {
-    produce: "Produce",
-    meat: "Meat & Seafood",
-    dairy: "Dairy & Eggs",
-    frozen: "Frozen",
-    spices: "Spices",
-    pantry: "Pantry & Other"
-  };
-
-  // Get recipe names from selected plan
-  const recipeNames = useMemo((): string => {
-    if (!selectedPlanId) return "";
-    const plan = mealPlans.find((p) => p.id === selectedPlanId);
-    if (!plan) return "";
-    return plan.meals.map((meal) => recipeMap.get(meal.recipeId)?.name || "Unknown Recipe").join(", ");
-  }, [selectedPlanId, mealPlans, recipeMap]);
 
   return (
     <DndProvider backend={HTML5Backend}>
