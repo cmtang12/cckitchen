@@ -1,11 +1,19 @@
 import React from "react";
-import { Outlet, Link } from "react-router";
+import { Outlet, Link, useNavigate } from "react-router";
 import { Sidebar } from "./Sidebar";
 import { MobileBottomNav } from "./MobileBottomNav";
-import { Plus } from "lucide-react";
+import { Plus, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
+import { logout } from "../utils/auth";
 
 export function RootLayout() {
+  const navigate = useNavigate();
+
+  function handleLogout() {
+    logout();
+    navigate("/login");
+  }
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Desktop Sidebar - hidden on mobile */}
@@ -33,6 +41,15 @@ export function RootLayout() {
           </div>
         </Link>
       </div>
+
+      {/* Logout Button */}
+      <button
+        onClick={handleLogout}
+        className="fixed top-4 right-4 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors z-50"
+        title="Logout"
+      >
+        <LogOut className="w-4 h-4" />
+      </button>
     </div>
   );
 }

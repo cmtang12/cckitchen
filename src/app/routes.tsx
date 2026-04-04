@@ -3,6 +3,8 @@ import { createBrowserRouter, redirect } from "react-router";
 import { RootLayout } from "./components/RootLayout";
 import { Dashboard } from "./pages/Dashboard";
 import { MealPlans } from "./pages/MealPlans";
+import { Login } from "./pages/Login";
+import { isAuthenticated } from "./utils/auth";
 
 const RecipesLibrary = lazy(() => import("./pages/RecipesLibrary").then(m => ({ default: m.RecipesLibrary })));
 const RecipeDetail = lazy(() => import("./pages/RecipeDetail").then(m => ({ default: m.RecipeDetail })));
@@ -22,9 +24,19 @@ const LoadingFallback = () => (
   </div>
 );
 
+function requireAuth() {
+  if (!isAuthenticated()) return redirect("/login");
+  return null;
+}
+
 export const router = createBrowserRouter([
   {
+    path: "/login",
+    element: <Login />,
+  },
+  {
     path: "/",
+    loader: requireAuth,
     element: <RootLayout />,
     children: [
       { 
