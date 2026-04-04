@@ -6,11 +6,12 @@ import { Plus, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 import { logout } from "../utils/auth";
 
+
 export function RootLayout() {
   const navigate = useNavigate();
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     navigate("/login");
   }
 
