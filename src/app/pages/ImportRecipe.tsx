@@ -668,7 +668,7 @@ export function ImportRecipe() {
                              instructions.filter(i => i.trim()).length === 0;
 
     return (
-      <div className="max-w-4xl mx-auto px-6 sm:px-8 py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <Card className="border-border/50">
           <CardHeader>
             <div className="flex items-center gap-2 mb-2">
@@ -1022,7 +1022,7 @@ export function ImportRecipe() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 sm:px-8 py-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-10">
         <h1 className="text-2xl font-semibold text-foreground mb-2">Import Recipe</h1>

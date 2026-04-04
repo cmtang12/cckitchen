@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { mealPlanAPI, recipeAPI } from "../services/api";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Package, Copy, Download, Mail, Share2, Check, X, GripVertical, Clock, Users } from "lucide-react";
+import { Package, Copy, Download, Mail, Share2, Check, X, GripVertical, Clock, Users, Plus } from "lucide-react";
+import { Input } from "../components/ui/input";
 import { Link } from "react-router";
 import { MealPlan, Recipe, Ingredient } from "../types";
 import { toast } from "sonner";
@@ -258,6 +259,11 @@ export function GroceryList() {
   const [removedCategories, setRemovedCategories] = useState<Set<string>>(new Set());
   const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(new Set());
   const [categoryOverrides, setCategoryOverrides] = useState<Map<string, string>>(new Map());
+  const [adHocItems, setAdHocItems] = useState<CategorizedIngredient[]>([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemAmount, setNewItemAmount] = useState('');
+  const [newItemCategory, setNewItemCategory] = useState('pantry');
 
   useEffect(() => {
     loadData();
@@ -318,6 +324,19 @@ export function GroceryList() {
     } else {
       setRemovedCategories(new Set());
     }
+
+    // Load ad hoc items
+    const savedAdHoc = localStorage.getItem(`grocery-adhoc-${selectedPlanId}`);
+    if (savedAdHoc) {
+      try {
+        setAdHocItems(JSON.parse(savedAdHoc));
+      } catch (error) {
+        console.error("Failed to load ad hoc items:", error);
+        setAdHocItems([]);
+      }
+    } else {
+      setAdHocItems([]);
+    }
   }, [selectedPlanId]);
 
   // Persist category overrides
@@ -347,10 +366,16 @@ export function GroceryList() {
   // Persist removed categories
   useEffect(() => {
     if (!selectedPlanId) return;
-    
+
     const removedArray = Array.from(removedCategories);
     localStorage.setItem(`grocery-removed-categories-${selectedPlanId}`, JSON.stringify(removedArray));
   }, [removedCategories, selectedPlanId]);
+
+  // Persist ad hoc items
+  useEffect(() => {
+    if (!selectedPlanId) return;
+    localStorage.setItem(`grocery-adhoc-${selectedPlanId}`, JSON.stringify(adHocItems));
+  }, [adHocItems, selectedPlanId]);
 
   const loadData = async () => {
     try {
@@ -440,10 +465,21 @@ export function GroceryList() {
       if (removedIngredients.has(ingredient.name.toLowerCase())) {
         return;
       }
-      
+
       // Apply category override if exists
       const finalCategory = categoryOverrides.get(ingredient.name.toLowerCase()) || ingredient.category;
       categorized[finalCategory].push(ingredient);
+    });
+
+    // Include ad hoc items
+    adHocItems.forEach((item) => {
+      if (removedIngredients.has(item.name.toLowerCase())) return;
+      const finalCategory = categoryOverrides.get(item.name.toLowerCase()) || item.category;
+      const bucket = categorized[finalCategory] ?? (categorized[finalCategory] = []);
+      // Avoid duplicates with recipe ingredients
+      if (!bucket.some((i) => i.name.toLowerCase() === item.name.toLowerCase())) {
+        bucket.push(item);
+      }
     });
 
     // Sort within each category
@@ -475,7 +511,7 @@ export function GroceryList() {
   const categorizedList = useMemo(
     () => generateGroceryList(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedPlanId, mealPlans, recipeMap, categoryOverrides, removedIngredients]
+    [selectedPlanId, mealPlans, recipeMap, categoryOverrides, removedIngredients, adHocItems]
   );
   const totalItems = useMemo(
     () => Object.values(categorizedList).reduce((sum, items) => sum + items.length, 0),
@@ -645,12 +681,54 @@ export function GroceryList() {
     }
   };
 
-  const removeIngredient = (ingredientName: string) => {
+  const addAdHocItem = () => {
+    const name = newItemName.trim();
+    if (!name) return;
+    const key = name.toLowerCase();
+    const category = categoryOverrides.get(key) || newItemCategory;
+    const amount = newItemAmount.trim();
+    const newItem: CategorizedIngredient = {
+      name,
+      totalAmount: amount,
+      amounts: amount ? [{ amount, recipeId: 'adhoc' }] : [],
+      recipeNames: [],
+      category,
+    };
+    setAdHocItems(prev => {
+      const exists = prev.findIndex(i => i.name.toLowerCase() === key);
+      if (exists >= 0) {
+        const updated = [...prev];
+        updated[exists] = newItem;
+        return updated;
+      }
+      return [...prev, newItem];
+    });
+    // Also un-remove it if it was previously removed
     setRemovedIngredients(prev => {
       const newSet = new Set(prev);
-      newSet.add(ingredientName.toLowerCase());
+      newSet.delete(key);
       return newSet;
     });
+    setNewItemName('');
+    setNewItemAmount('');
+    setNewItemCategory('pantry');
+    setShowAddForm(false);
+    toast.success(`Added ${name}`);
+  };
+
+  const removeIngredient = (ingredientName: string) => {
+    const key = ingredientName.toLowerCase();
+    // If it's an ad hoc item, delete it directly instead of hiding via removedIngredients
+    const isAdHoc = adHocItems.some(i => i.name.toLowerCase() === key);
+    if (isAdHoc) {
+      setAdHocItems(prev => prev.filter(i => i.name.toLowerCase() !== key));
+    } else {
+      setRemovedIngredients(prev => {
+        const newSet = new Set(prev);
+        newSet.add(key);
+        return newSet;
+      });
+    }
     toast.success(`Removed ${ingredientName}`);
   };
 
@@ -678,7 +756,7 @@ export function GroceryList() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-10">
           <div className="h-9 w-48 bg-muted/60 rounded-lg animate-pulse mb-2" />
           <div className="h-4 w-64 bg-muted/40 rounded animate-pulse" />
@@ -700,7 +778,7 @@ export function GroceryList() {
 
   if (mealPlans.length === 0) {
     return (
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="mb-10">
           <h1 className="text-3xl font-semibold text-foreground mb-2">Grocery List</h1>
@@ -735,7 +813,7 @@ export function GroceryList() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-    <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 py-12">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
       {/* Header */}
       <div className="mb-6">
@@ -876,7 +954,7 @@ export function GroceryList() {
 
         {/* ── GROCERY LIST TAB ── */}
         <TabsContent value="grocery">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4">
             <span className="text-sm font-medium text-muted-foreground">
               {totalItems} {totalItems === 1 ? 'item' : 'items'}
             </span>
@@ -896,6 +974,51 @@ export function GroceryList() {
                 </Button>
               )}
             </div>
+          </div>
+
+          {/* Add Ingredient Button / Form */}
+          <div className="mb-6">
+            {showAddForm ? (
+              <div className="flex flex-col sm:flex-row gap-2 p-4 rounded-lg border border-border/50 bg-muted/20">
+                <Input
+                  placeholder="Ingredient name"
+                  value={newItemName}
+                  onChange={e => setNewItemName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') addAdHocItem(); if (e.key === 'Escape') setShowAddForm(false); }}
+                  autoFocus
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="Amount (optional)"
+                  value={newItemAmount}
+                  onChange={e => setNewItemAmount(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') addAdHocItem(); if (e.key === 'Escape') setShowAddForm(false); }}
+                  className="sm:w-36"
+                />
+                <select
+                  value={newItemCategory}
+                  onChange={e => setNewItemCategory(e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground sm:w-40"
+                >
+                  {Object.entries(categoryNames).map(([key, label]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
+                <div className="flex gap-2">
+                  <Button onClick={addAdHocItem} className="flex-1 sm:flex-none" disabled={!newItemName.trim()}>
+                    Add
+                  </Button>
+                  <Button variant="ghost" onClick={() => { setShowAddForm(false); setNewItemName(''); setNewItemAmount(''); setNewItemCategory('pantry'); }} className="flex-1 sm:flex-none">
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)} className="w-full border-dashed text-muted-foreground hover:text-foreground">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Ingredient
+              </Button>
+            )}
           </div>
 
           <div className="space-y-8">

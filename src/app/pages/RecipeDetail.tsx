@@ -480,7 +480,7 @@ export function RecipeDetail() {
 
   if (isLoading) {
     return (
-      <div className="max-w-5xl mx-auto px-6 sm:px-8 py-16">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="flex flex-col items-center justify-center">
           <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
           <p className="text-muted-foreground text-sm">Loading recipe...</p>
@@ -491,7 +491,7 @@ export function RecipeDetail() {
 
   if (!recipe) {
     return (
-      <div className="max-w-5xl mx-auto px-6 sm:px-8 py-16 text-center">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h1 className="text-2xl font-semibold text-foreground mb-4">Recipe not found</h1>
         <Link to="/">
           <Button variant="outline" className="rounded-lg">Back to Library</Button>
@@ -502,7 +502,7 @@ export function RecipeDetail() {
 
   if (isEditing) {
     return (
-      <div className="max-w-4xl mx-auto px-6 sm:px-8 py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-foreground mb-2">Edit Recipe</h1>
           <p className="text-muted-foreground text-sm">Make changes to your recipe</p>
@@ -902,7 +902,7 @@ export function RecipeDetail() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-6 sm:px-8 py-12">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {/* Header with Icon CTAs */}
       <div className="flex items-center justify-between mb-8">
         <Link to="/">

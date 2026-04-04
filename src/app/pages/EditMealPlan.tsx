@@ -545,7 +545,7 @@ export function EditMealPlan() {
 
   if (isLoading) {
     return (
-      <div className="max-w-5xl mx-auto px-6 sm:px-8 py-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
           <p className="text-muted-foreground">Loading meal plan...</p>
@@ -556,7 +556,7 @@ export function EditMealPlan() {
 
   if (!mealPlan) {
     return (
-      <div className="max-w-5xl mx-auto px-6 sm:px-8 py-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center py-20">
           <p className="text-muted-foreground">Meal plan not found</p>
           <Button
@@ -572,7 +572,7 @@ export function EditMealPlan() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="max-w-6xl mx-auto px-6 sm:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <Button
