@@ -333,7 +333,7 @@ export function MealPlanner({ onClose }: MealPlannerProps) {
 
   if (step === "generating") {
     return (
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="max-w-md mx-auto text-center">
           <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-6" />
           <h2 className="text-xl font-semibold text-foreground mb-2">
@@ -349,7 +349,7 @@ export function MealPlanner({ onClose }: MealPlannerProps) {
 
   if (step === "review") {
     return (
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Close button for full-screen mode */}
         {onClose && (
           <div className="flex justify-between items-center mb-6">

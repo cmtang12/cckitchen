@@ -49,7 +49,7 @@ export function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="flex flex-col items-center justify-center">
           <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
           <p className="text-muted-foreground text-sm">Loading dashboard...</p>
@@ -139,7 +139,7 @@ export function Dashboard() {
     .slice(0, 8);
 
   return (
-    <div className="max-w-4xl mx-auto px-6 sm:px-8 py-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-foreground mb-1">Dashboard</h1>
@@ -322,7 +322,7 @@ export function Dashboard() {
               <p className="text-sm text-muted-foreground text-center py-8">No cooking activity logged yet.</p>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={weeklyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <BarChart data={weeklyData} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                   <XAxis
                     dataKey="week"

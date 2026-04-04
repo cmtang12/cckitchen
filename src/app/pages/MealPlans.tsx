@@ -16,7 +16,7 @@ export function MealPlans() {
       {/* Full-screen Tinder Modal - completely covers everything including nav */}
       {showTinderFullscreen && (
         <div className="fixed inset-0 bg-background z-[100] overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <TinderStyle onClose={() => setShowTinderFullscreen(false)} />
           </div>
         </div>
@@ -25,23 +25,24 @@ export function MealPlans() {
       {/* Full-screen Roulette Modal - completely covers everything including nav */}
       {showRouletteFullscreen && (
         <div className="fixed inset-0 bg-background z-[100] overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <MealPlanner onClose={() => setShowRouletteFullscreen(false)} />
           </div>
         </div>
       )}
 
       {/* Main Content - Saved Plans by default */}
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header with Generate Button */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-8 flex items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold text-foreground">Meal Plans</h1>
           <Button
             onClick={() => setShowGenerateDialog(true)}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shrink-0"
           >
-            <Sparkles className="w-4 h-4 mr-2" />
-            Generate Meal Plans
+            <Sparkles className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Generate Meal Plans</span>
+            <span className="sm:hidden">Generate</span>
           </Button>
         </div>
 

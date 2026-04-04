@@ -16,14 +16,14 @@ export function RootLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex overflow-x-hidden">
       {/* Desktop Sidebar - hidden on mobile */}
       <div className="hidden md:block">
         <Sidebar />
       </div>
-      
+
       {/* Main Content Area */}
-      <div className="flex-1 md:ml-16 pb-20 md:pb-0">
+      <div className="flex-1 min-w-0 md:ml-16 pb-20 md:pb-0">
         <main className="min-h-screen">
           <Outlet />
         </main>
@@ -43,10 +43,10 @@ export function RootLayout() {
         </Link>
       </div>
 
-      {/* Logout Button */}
+      {/* Logout Button - desktop only (mobile uses bottom nav area) */}
       <button
         onClick={handleLogout}
-        className="fixed top-4 right-4 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors z-50"
+        className="hidden md:block fixed top-4 right-4 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors z-50"
         title="Logout"
       >
         <LogOut className="w-4 h-4" />

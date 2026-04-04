@@ -756,7 +756,7 @@ export function GroceryList() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-10">
           <div className="h-9 w-48 bg-muted/60 rounded-lg animate-pulse mb-2" />
           <div className="h-4 w-64 bg-muted/40 rounded animate-pulse" />
@@ -778,7 +778,7 @@ export function GroceryList() {
 
   if (mealPlans.length === 0) {
     return (
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="mb-10">
           <h1 className="text-3xl font-semibold text-foreground mb-2">Grocery List</h1>
@@ -813,7 +813,7 @@ export function GroceryList() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-    <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 py-12">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
       {/* Header */}
       <div className="mb-6">
