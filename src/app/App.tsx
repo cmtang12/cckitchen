@@ -1,6 +1,15 @@
 import React from 'react';
-import BlueprintApp from './blueprint/BlueprintApp';
+import { RouterProvider } from 'react-router';
+import { router } from './routes';
+import { Toaster } from './components/ui/sonner';
 
-export default function App() {
-  return <BlueprintApp />;
+function App() {
+  return (
+    <>
+      <RouterProvider router={router} />
+      <Toaster />
+    </>
+  );
 }
+
+export default App;
