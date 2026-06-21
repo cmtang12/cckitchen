@@ -1,26 +1,31 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { supabase } from "../utils/supabase";
 
-export function Login() {
-  const [email, setEmail] = useState("");
+export function ResetPassword() {
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError("");
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setLoading(false);
 
     if (error) {
-      setError("Incorrect email or password.");
-      setLoading(false);
+      setError(error.message);
     } else {
-      navigate("/");
+      navigate("/login");
     }
   }
 
@@ -29,23 +34,23 @@ export function Login() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground">CCKitchen</h1>
-          <p className="text-muted-foreground mt-2">Sign in to continue</p>
+          <p className="text-muted-foreground mt-2">Choose a new password</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="password"
+            placeholder="New password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             required
             autoFocus
             className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <input
             type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Confirm new password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
             required
             className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
@@ -55,14 +60,9 @@ export function Login() {
             disabled={loading}
             className="w-full py-3 rounded-lg bg-[#E07B67] text-white font-medium hover:bg-[#D16A56] transition-colors disabled:opacity-50"
           >
-            {loading ? "Signing in..." : "Sign in"}
+            {loading ? "Updating..." : "Update password"}
           </button>
         </form>
-        <p className="text-sm text-center text-muted-foreground mt-4">
-          <Link to="/forgot-password" className="underline">
-            Forgot password?
-          </Link>
-        </p>
       </div>
     </div>
   );
