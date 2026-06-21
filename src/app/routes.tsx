@@ -4,6 +4,8 @@ import { RootLayout } from "./components/RootLayout";
 import { Dashboard } from "./pages/Dashboard";
 import { MealPlans } from "./pages/MealPlans";
 import { Login } from "./pages/Login";
+import { ForgotPassword } from "./pages/ForgotPassword";
+import { ResetPassword } from "./pages/ResetPassword";
 import { getSession } from "./utils/auth";
 
 const RecipesLibrary = lazy(() => import("./pages/RecipesLibrary").then(m => ({ default: m.RecipesLibrary })));
@@ -34,6 +36,14 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     element: <Login />,
+  },
+  {
+    path: "/forgot-password",
+    element: <ForgotPassword />,
+  },
+  {
+    path: "/reset-password",
+    element: <ResetPassword />,
   },
   {
     path: "/",
