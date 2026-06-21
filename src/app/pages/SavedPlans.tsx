@@ -59,6 +59,7 @@ function DraggableRecipeCard({ meal, recipe, onDrop, onOpenSwap, onRemove }: Dra
         <img
           src={recipe.image}
           alt={recipe.name}
+          draggable={false}
           className="w-16 h-16 rounded object-cover"
         />
       )}
@@ -154,6 +155,7 @@ function DraggableGroupedRecipeCard({
         <img
           src={recipe.image}
           alt={recipe.name}
+          draggable={false}
           className="w-12 h-12 rounded object-cover"
         />
       )}
@@ -206,6 +208,40 @@ function DraggableGroupedRecipeCard({
           <X className="w-3.5 h-3.5" />
         </Button>
       </div>
+    </div>
+  );
+}
+
+interface GroupDropTargetProps {
+  groupMeals: PlannedMeal[];
+  onDrop: (draggedMealId: string, targetMealId: string) => void;
+  children: React.ReactNode;
+}
+
+function GroupDropTarget({ groupMeals, onDrop, children }: GroupDropTargetProps) {
+  const [{ isOver }, drop] = useDrop(
+    () => ({
+      accept: RECIPE_CARD_TYPE,
+      drop: (item: { mealId: string }, monitor) => {
+        // A nested recipe row's own drop target already handled it.
+        if (monitor.didDrop()) return;
+        onDrop(item.mealId, groupMeals[0].id);
+      },
+      collect: (monitor) => ({
+        isOver: monitor.isOver({ shallow: true }),
+      }),
+    }),
+    [groupMeals, onDrop]
+  );
+
+  return (
+    <div
+      ref={drop}
+      className={`border-2 rounded-lg p-3 space-y-2 mb-3 transition-all ${
+        isOver ? "border-primary bg-primary/10" : "border-primary/20 bg-primary/5"
+      }`}
+    >
+      {children}
     </div>
   );
 }
@@ -654,9 +690,10 @@ export function SavedPlans() {
                             if (groupRecipes.length === 0) return null;
 
                             return (
-                              <div
+                              <GroupDropTarget
                                 key={`group-${groupIndex}`}
-                                className="border-2 border-primary/20 rounded-lg p-3 bg-primary/5"
+                                groupMeals={group}
+                                onDrop={handleDropRecipeOnRecipe}
                               >
                                 <div className="flex items-center gap-2 mb-2">
                                   <UtensilsCrossed className="w-4 h-4 text-primary" />
@@ -667,7 +704,7 @@ export function SavedPlans() {
                                     ({groupRecipes.length} recipes)
                                   </span>
                                 </div>
-                                
+
                                 <div className="space-y-2">
                                   {group.map((meal) => {
                                     const recipe = getRecipeById(meal.recipeId);
@@ -686,7 +723,7 @@ export function SavedPlans() {
                                     );
                                   })}
                                 </div>
-                              </div>
+                              </GroupDropTarget>
                             );
                           })}
 
