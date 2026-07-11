@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo } from "react";
 import { mealPlanAPI, recipeAPI } from "../services/api";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Package, Copy, Download, Mail, Share2, Check, X, GripVertical, Clock, Users, Plus } from "lucide-react";
+import { Package, Copy, Download, Mail, Share2, Check, X, GripVertical, Clock, Users, Plus, Pencil } from "lucide-react";
 import { Input } from "../components/ui/input";
 import { Link } from "react-router";
 import { MealPlan, Recipe, Ingredient } from "../types";
 import { toast } from "sonner";
+import { cleanIngredientName, normalizeIngredientKey, formatDisplayName, formatEstimate } from "../utils/groceryList";
 import {
   Select,
   SelectContent,
@@ -29,8 +30,9 @@ const INGREDIENT_CATEGORIES = {
 };
 
 interface CategorizedIngredient {
+  key: string; // stable identity used for merging/checking/removing/editing, independent of display text
   name: string;
-  totalAmount: string;
+  estimate: string; // e.g. "(2)", or "" when no meaningful count (measured amounts like "1 tablespoon")
   amounts: Array<{ amount: string; recipeId: string }>;
   recipeNames: string[];
   category: string;
@@ -95,76 +97,23 @@ function categorizeIngredient(ingredientName: string): string {
   return "pantry"; // Default category
 }
 
-// Helper to combine ingredient amounts
-function combineAmounts(amounts: Array<{ amount: string; recipeId: string }>): string {
-  // Try to extract numbers and combine them
-  const numericAmounts: number[] = [];
-  const nonNumericAmounts: string[] = [];
-  
-  amounts.forEach(({ amount }) => {
-    const trimmed = amount.trim();
-    
-    // Try to extract leading number (handles "2 cups", "1/2 cup", "1.5 tbsp", etc.)
-    const match = trimmed.match(/^(\d+(?:\.\d+)?|\d+\/\d+)/);
-    
-    if (match) {
-      // Parse fractions
-      if (match[1].includes('/')) {
-        const [num, denom] = match[1].split('/').map(Number);
-        numericAmounts.push(num / denom);
-      } else {
-        numericAmounts.push(parseFloat(match[1]));
-      }
-    } else {
-      nonNumericAmounts.push(trimmed);
-    }
-  });
-  
-  // If we have numeric amounts, sum them
-  if (numericAmounts.length > 0) {
-    const total = numericAmounts.reduce((sum, val) => sum + val, 0);
-    
-    // Get the unit from the first amount
-    const firstAmount = amounts[0].amount;
-    const unitMatch = firstAmount.match(/\d+(?:\.\d+)?(?:\/\d+)?\s*(.+)/);
-    const unit = unitMatch ? unitMatch[1] : "";
-    
-    // Format the total nicely
-    let totalStr: string;
-    if (total % 1 === 0) {
-      totalStr = total.toString();
-    } else {
-      totalStr = total.toFixed(2).replace(/\.?0+$/, '');
-    }
-    
-    return `${totalStr} ${unit}`.trim();
-  }
-  
-  // If non-numeric or couldn't parse, just list them
-  if (nonNumericAmounts.length > 0) {
-    return nonNumericAmounts.join(", ");
-  }
-  
-  // Fallback
-  return amounts.map(a => a.amount).join(", ");
-}
-
 // Draggable Ingredient Item Component
 interface DraggableIngredientProps {
   item: CategorizedIngredient;
   isChecked: boolean;
-  onToggleCheck: (name: string) => void;
-  onRemove: (name: string) => void;
+  onToggleCheck: (key: string) => void;
+  onRemove: (key: string) => void;
+  onEdit: (item: CategorizedIngredient) => void;
 }
 
-const DraggableIngredient = ({ item, isChecked, onToggleCheck, onRemove }: DraggableIngredientProps) => {
+const DraggableIngredient = ({ item, isChecked, onToggleCheck, onRemove, onEdit }: DraggableIngredientProps) => {
   const [{ isDragging }, drag, preview] = useDrag(() => ({
     type: 'INGREDIENT',
-    item: { name: item.name },
+    item: { key: item.key },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
-  }), [item.name]);
+  }), [item.key]);
 
   return (
     <div
@@ -174,7 +123,7 @@ const DraggableIngredient = ({ item, isChecked, onToggleCheck, onRemove }: Dragg
       }`}
     >
       <button
-        onClick={() => onToggleCheck(item.name)}
+        onClick={() => onToggleCheck(item.key)}
         className={`w-5 h-5 rounded border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition-colors cursor-pointer ${
           isChecked
             ? "bg-primary border-primary"
@@ -196,7 +145,7 @@ const DraggableIngredient = ({ item, isChecked, onToggleCheck, onRemove }: Dragg
             ? "line-through text-muted-foreground/50"
             : "text-foreground"
         }`}>
-          {item.totalAmount} {item.name}
+          {item.name}{item.estimate ? ` ${item.estimate}` : ""}
         </p>
         {item.recipeNames.length > 1 && (
           <p className={`text-xs mt-0.5 transition-opacity ${
@@ -211,7 +160,16 @@ const DraggableIngredient = ({ item, isChecked, onToggleCheck, onRemove }: Dragg
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => onRemove(item.name)}
+        onClick={() => onEdit(item)}
+        className="h-7 w-7 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+        title="Edit ingredient"
+      >
+        <Pencil className="w-3.5 h-3.5" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onRemove(item.key)}
         className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
         title="Remove ingredient"
       >
@@ -231,8 +189,8 @@ interface DroppableCategoryProps {
 const DroppableCategory = ({ category, children, onDrop }: DroppableCategoryProps) => {
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'INGREDIENT',
-    drop: (item: { name: string }) => {
-      onDrop(item.name, category);
+    drop: (item: { key: string }) => {
+      onDrop(item.key, category);
     },
     collect: (monitor) => ({
       isOver: monitor.isOver(),
@@ -260,10 +218,14 @@ export function GroceryList() {
   const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(new Set());
   const [categoryOverrides, setCategoryOverrides] = useState<Map<string, string>>(new Map());
   const [adHocItems, setAdHocItems] = useState<CategorizedIngredient[]>([]);
+  const [itemEdits, setItemEdits] = useState<Map<string, { name: string; estimate: string }>>(new Map());
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemAmount, setNewItemAmount] = useState('');
   const [newItemCategory, setNewItemCategory] = useState('pantry');
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editEstimate, setEditEstimate] = useState('');
 
   useEffect(() => {
     loadData();
@@ -337,6 +299,20 @@ export function GroceryList() {
     } else {
       setAdHocItems([]);
     }
+
+    // Load manual item edits
+    const savedEdits = localStorage.getItem(`grocery-edits-${selectedPlanId}`);
+    if (savedEdits) {
+      try {
+        const parsed = JSON.parse(savedEdits);
+        setItemEdits(new Map(Object.entries(parsed)));
+      } catch (error) {
+        console.error("Failed to load item edits:", error);
+        setItemEdits(new Map());
+      }
+    } else {
+      setItemEdits(new Map());
+    }
   }, [selectedPlanId]);
 
   // Persist category overrides
@@ -376,6 +352,13 @@ export function GroceryList() {
     if (!selectedPlanId) return;
     localStorage.setItem(`grocery-adhoc-${selectedPlanId}`, JSON.stringify(adHocItems));
   }, [adHocItems, selectedPlanId]);
+
+  // Persist manual item edits
+  useEffect(() => {
+    if (!selectedPlanId) return;
+    const editsObj = Object.fromEntries(itemEdits);
+    localStorage.setItem(`grocery-edits-${selectedPlanId}`, JSON.stringify(editsObj));
+  }, [itemEdits, selectedPlanId]);
 
   const loadData = async () => {
     try {
@@ -417,30 +400,36 @@ export function GroceryList() {
     const plan = mealPlans.find((p) => p.id === selectedPlanId);
     if (!plan) return {};
 
-    // Collect all ingredients from all meals in the plan
-    const ingredientMap = new Map<string, CategorizedIngredient>();
+    // Collect all ingredients from all meals in the plan, merging duplicates
+    // (e.g. "1/2 onion" in two recipes) by a normalized key rather than raw text.
+    interface RawIngredientGroup {
+      rawName: string;
+      amounts: Array<{ amount: string; recipeId: string }>;
+      recipeNames: string[];
+      category: string;
+    }
+    const ingredientMap = new Map<string, RawIngredientGroup>();
 
     plan.meals.forEach((meal) => {
       const recipe = recipeMap.get(meal.recipeId);
       if (recipe) {
         recipe.ingredients.forEach((ing) => {
-          const key = ing.name.toLowerCase();
-          
+          const key = normalizeIngredientKey(ing.name) || ing.name.toLowerCase().trim();
+          if (!key) return;
+
           if (ingredientMap.has(key)) {
             const existing = ingredientMap.get(key)!;
             existing.amounts.push({ amount: ing.amount, recipeId: recipe.id });
             if (!existing.recipeNames.includes(recipe.name)) {
               existing.recipeNames.push(recipe.name);
             }
-            // Recombine amounts
-            existing.totalAmount = combineAmounts(existing.amounts);
           } else {
+            const cleanedName = cleanIngredientName(ing.name) || ing.name.trim();
             // Check for user override first, then auto-categorize
-            const autoCategory = categorizeIngredient(ing.name);
+            const autoCategory = categorizeIngredient(cleanedName);
             const category = categoryOverrides.get(key) || autoCategory;
             ingredientMap.set(key, {
-              name: ing.name,
-              totalAmount: ing.amount,
+              rawName: cleanedName,
               amounts: [{ amount: ing.amount, recipeId: recipe.id }],
               recipeNames: [recipe.name],
               category,
@@ -460,26 +449,45 @@ export function GroceryList() {
       pantry: [],
     };
 
-    ingredientMap.forEach((ingredient) => {
+    ingredientMap.forEach((group, key) => {
       // Skip removed ingredients
-      if (removedIngredients.has(ingredient.name.toLowerCase())) {
-        return;
-      }
+      if (removedIngredients.has(key)) return;
+
+      const estimate = formatEstimate(group.amounts.map((a) => a.amount));
+      const item: CategorizedIngredient = {
+        key,
+        name: formatDisplayName(group.rawName, estimate !== ""),
+        estimate,
+        amounts: group.amounts,
+        recipeNames: group.recipeNames,
+        category: group.category,
+      };
 
       // Apply category override if exists
-      const finalCategory = categoryOverrides.get(ingredient.name.toLowerCase()) || ingredient.category;
-      categorized[finalCategory].push(ingredient);
+      const finalCategory = categoryOverrides.get(key) || item.category;
+      (categorized[finalCategory] ?? (categorized[finalCategory] = [])).push(item);
     });
 
     // Include ad hoc items
     adHocItems.forEach((item) => {
-      if (removedIngredients.has(item.name.toLowerCase())) return;
-      const finalCategory = categoryOverrides.get(item.name.toLowerCase()) || item.category;
+      if (removedIngredients.has(item.key)) return;
+      const finalCategory = categoryOverrides.get(item.key) || item.category;
       const bucket = categorized[finalCategory] ?? (categorized[finalCategory] = []);
       // Avoid duplicates with recipe ingredients
-      if (!bucket.some((i) => i.name.toLowerCase() === item.name.toLowerCase())) {
+      if (!bucket.some((i) => i.key === item.key)) {
         bucket.push(item);
       }
+    });
+
+    // Apply manual edits (user-entered overrides of name/estimate) as the final step
+    Object.values(categorized).forEach((items) => {
+      items.forEach((item) => {
+        const edit = itemEdits.get(item.key);
+        if (edit) {
+          item.name = edit.name;
+          item.estimate = edit.estimate;
+        }
+      });
     });
 
     // Sort within each category
@@ -490,13 +498,21 @@ export function GroceryList() {
     return categorized;
   };
 
-  const moveIngredient = (ingredientName: string, targetCategory: string) => {
+  const findItemName = (key: string): string => {
+    for (const items of Object.values(categorizedList)) {
+      const found = items.find((i) => i.key === key);
+      if (found) return found.name;
+    }
+    return key;
+  };
+
+  const moveIngredient = (key: string, targetCategory: string) => {
     setCategoryOverrides(prev => {
       const newMap = new Map(prev);
-      newMap.set(ingredientName.toLowerCase(), targetCategory);
+      newMap.set(key, targetCategory);
       return newMap;
     });
-    toast.success(`Moved ${ingredientName} to ${categoryNames[targetCategory]}`);
+    toast.success(`Moved ${findItemName(key)} to ${categoryNames[targetCategory]}`);
   };
 
   const categoryNames: Record<string, string> = {
@@ -511,7 +527,7 @@ export function GroceryList() {
   const categorizedList = useMemo(
     () => generateGroceryList(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedPlanId, mealPlans, recipeMap, categoryOverrides, removedIngredients, adHocItems]
+    [selectedPlanId, mealPlans, recipeMap, categoryOverrides, removedIngredients, adHocItems, itemEdits]
   );
   const totalItems = useMemo(
     () => Object.values(categorizedList).reduce((sum, items) => sum + items.length, 0),
@@ -579,9 +595,10 @@ export function GroceryList() {
       text += `${"-".repeat(40)}\n`;
       
       items.forEach((item) => {
-        text += `☐ ${item.name} - ${item.totalAmount}`;
+        text += `☐ ${item.name}`;
+        if (item.estimate) text += ` ${item.estimate}`;
         if (item.recipeNames.length > 1) {
-          text += ` (${item.recipeNames.length} recipes)`;
+          text += ` — used in ${item.recipeNames.length} recipes`;
         }
         text += `\n`;
       });
@@ -682,20 +699,22 @@ export function GroceryList() {
   };
 
   const addAdHocItem = () => {
-    const name = newItemName.trim();
-    if (!name) return;
-    const key = name.toLowerCase();
+    const rawName = newItemName.trim();
+    if (!rawName) return;
+    const key = normalizeIngredientKey(rawName) || rawName.toLowerCase();
     const category = categoryOverrides.get(key) || newItemCategory;
     const amount = newItemAmount.trim();
+    const estimate = amount ? formatEstimate([amount]) : '';
     const newItem: CategorizedIngredient = {
-      name,
-      totalAmount: amount,
+      key,
+      name: formatDisplayName(cleanIngredientName(rawName) || rawName, estimate !== ""),
+      estimate,
       amounts: amount ? [{ amount, recipeId: 'adhoc' }] : [],
       recipeNames: [],
       category,
     };
     setAdHocItems(prev => {
-      const exists = prev.findIndex(i => i.name.toLowerCase() === key);
+      const exists = prev.findIndex(i => i.key === key);
       if (exists >= 0) {
         const updated = [...prev];
         updated[exists] = newItem;
@@ -713,15 +732,14 @@ export function GroceryList() {
     setNewItemAmount('');
     setNewItemCategory('pantry');
     setShowAddForm(false);
-    toast.success(`Added ${name}`);
+    toast.success(`Added ${newItem.name}`);
   };
 
-  const removeIngredient = (ingredientName: string) => {
-    const key = ingredientName.toLowerCase();
+  const removeIngredient = (key: string) => {
     // If it's an ad hoc item, delete it directly instead of hiding via removedIngredients
-    const isAdHoc = adHocItems.some(i => i.name.toLowerCase() === key);
+    const isAdHoc = adHocItems.some(i => i.key === key);
     if (isAdHoc) {
-      setAdHocItems(prev => prev.filter(i => i.name.toLowerCase() !== key));
+      setAdHocItems(prev => prev.filter(i => i.key !== key));
     } else {
       setRemovedIngredients(prev => {
         const newSet = new Set(prev);
@@ -729,7 +747,14 @@ export function GroceryList() {
         return newSet;
       });
     }
-    toast.success(`Removed ${ingredientName}`);
+    // Clear any manual edit for this item too
+    setItemEdits(prev => {
+      if (!prev.has(key)) return prev;
+      const newMap = new Map(prev);
+      newMap.delete(key);
+      return newMap;
+    });
+    toast.success(`Removed ${findItemName(key)}`);
   };
 
   const removeCategory = (category: string) => {
@@ -741,10 +766,9 @@ export function GroceryList() {
     toast.success(`Removed ${category} category`);
   };
 
-  const toggleIngredientCheck = (ingredientName: string) => {
+  const toggleIngredientCheck = (key: string) => {
     setCheckedIngredients(prev => {
       const newSet = new Set(prev);
-      const key = ingredientName.toLowerCase();
       if (newSet.has(key)) {
         newSet.delete(key);
       } else {
@@ -752,6 +776,35 @@ export function GroceryList() {
       }
       return newSet;
     });
+  };
+
+  const startEdit = (item: CategorizedIngredient) => {
+    setEditingKey(item.key);
+    setEditName(item.name);
+    setEditEstimate(item.estimate.replace(/^\(|\)$/g, ''));
+  };
+
+  const cancelEdit = () => {
+    setEditingKey(null);
+    setEditName('');
+    setEditEstimate('');
+  };
+
+  const saveEdit = () => {
+    if (!editingKey) return;
+    const name = editName.trim();
+    if (!name) {
+      cancelEdit();
+      return;
+    }
+    const estimateRaw = editEstimate.trim();
+    const estimate = estimateRaw ? (estimateRaw.startsWith('(') ? estimateRaw : `(${estimateRaw})`) : '';
+    setItemEdits(prev => {
+      const newMap = new Map(prev);
+      newMap.set(editingKey, { name, estimate });
+      return newMap;
+    });
+    cancelEdit();
   };
 
   if (isLoading) {
@@ -989,7 +1042,7 @@ export function GroceryList() {
                   className="flex-1"
                 />
                 <Input
-                  placeholder="Amount (optional)"
+                  placeholder="Estimate (optional)"
                   value={newItemAmount}
                   onChange={e => setNewItemAmount(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') addAdHocItem(); if (e.key === 'Escape') setShowAddForm(false); }}
@@ -1039,13 +1092,44 @@ export function GroceryList() {
                       <CardContent className="p-6">
                         <div className="space-y-2">
                           {items.map((item) => (
-                            <DraggableIngredient
-                              key={item.name}
-                              item={item}
-                              isChecked={checkedIngredients.has(item.name.toLowerCase())}
-                              onToggleCheck={toggleIngredientCheck}
-                              onRemove={removeIngredient}
-                            />
+                            editingKey === item.key ? (
+                              <div
+                                key={item.key}
+                                className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 rounded-lg border border-primary/50 bg-muted/20"
+                              >
+                                <Input
+                                  value={editName}
+                                  onChange={e => setEditName(e.target.value)}
+                                  onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
+                                  autoFocus
+                                  className="flex-1"
+                                />
+                                <Input
+                                  value={editEstimate}
+                                  onChange={e => setEditEstimate(e.target.value)}
+                                  placeholder="Estimate e.g. 2"
+                                  onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
+                                  className="sm:w-32"
+                                />
+                                <div className="flex gap-2">
+                                  <Button size="sm" onClick={saveEdit} disabled={!editName.trim()} className="flex-1 sm:flex-none">
+                                    Save
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={cancelEdit} className="flex-1 sm:flex-none">
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <DraggableIngredient
+                                key={item.key}
+                                item={item}
+                                isChecked={checkedIngredients.has(item.key)}
+                                onToggleCheck={toggleIngredientCheck}
+                                onRemove={removeIngredient}
+                                onEdit={startEdit}
+                              />
+                            )
                           ))}
                         </div>
                       </CardContent>
