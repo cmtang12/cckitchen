@@ -4,6 +4,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { Badge } from "../components/ui/badge";
 import { FolderHeart, Loader2, Pencil, Trash2, Plus, Search, X, Check, UtensilsCrossed, RefreshCw } from "lucide-react";
@@ -15,6 +16,30 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { formatCookingTime } from "../utils/formatTime";
 
 const RECIPE_CARD_TYPE = "RECIPE_CARD";
+
+type SortOption = "newest" | "oldest" | "alphabetical";
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "alphabetical", label: "Alphabetical" },
+];
+
+function sortMealPlans(plans: MealPlan[], sortBy: SortOption): MealPlan[] {
+  const sorted = [...plans];
+  switch (sortBy) {
+    case "newest":
+      return sorted.sort(
+        (a, b) => new Date(b.dateCreated).getTime() - new Date(a.dateCreated).getTime()
+      );
+    case "oldest":
+      return sorted.sort(
+        (a, b) => new Date(a.dateCreated).getTime() - new Date(b.dateCreated).getTime()
+      );
+    case "alphabetical":
+      return sorted.sort((a, b) => a.name.localeCompare(b.name));
+  }
+}
 
 // Draggable Recipe Card Component (for ungrouped recipes)
 interface DraggableRecipeCardProps {
@@ -253,6 +278,7 @@ export function SavedPlans() {
   const [editingPlan, setEditingPlan] = useState<MealPlan | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddingRecipes, setIsAddingRecipes] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
   
   // Swap modal state
   const [swapModalOpen, setSwapModalOpen] = useState(false);
@@ -510,6 +536,8 @@ export function SavedPlans() {
 
   const navigate = useNavigate();
 
+  const sortedMealPlans = sortMealPlans(mealPlans, sortBy);
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
@@ -542,8 +570,24 @@ export function SavedPlans() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {mealPlans.map((plan) => {
+        <>
+          <div className="mb-4 flex items-center justify-end gap-2">
+            <span className="text-sm text-muted-foreground">Sort by</span>
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+              <SelectTrigger className="w-[160px] border-border/50" size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {sortedMealPlans.map((plan) => {
             const recipeCount = plan.meals.length;
             const planRecipes = plan.meals
               .map((m) => getRecipeById(m.recipeId))
@@ -633,7 +677,8 @@ export function SavedPlans() {
               </Card>
             );
           })}
-        </div>
+          </div>
+        </>
       )}
 
       {/* Edit Plan Dialog */}
