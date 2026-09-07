@@ -30,9 +30,21 @@ function writeCache(endpoint: string, data: unknown) {
   try { localStorage.setItem(CACHE_PREFIX + endpoint, JSON.stringify({ data, ts: Date.now() })); } catch {}
 }
 
-function invalidateCache() {
-  memCache.clear();
-  Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX)).forEach(k => localStorage.removeItem(k));
+// Only the resource that was actually mutated needs its cache cleared, e.g.
+// "/recipes/abc" -> "/recipes". Scoping this means editing a meal plan doesn't
+// force the (much larger, image-heavy) recipes list to refetch on next visit.
+function getResourcePrefix(endpoint: string): string {
+  const [, resource] = endpoint.split('/');
+  return resource ? `/${resource}` : endpoint;
+}
+
+function invalidateCache(resourcePrefix: string) {
+  for (const key of Array.from(memCache.keys())) {
+    if (key.startsWith(resourcePrefix)) memCache.delete(key);
+  }
+  Object.keys(localStorage)
+    .filter(k => k.startsWith(CACHE_PREFIX + resourcePrefix))
+    .forEach(k => localStorage.removeItem(k));
 }
 
 async function fetchAPI(endpoint: string, options: RequestInit = {}, timeoutMs: number = DEFAULT_TIMEOUT) {
@@ -49,8 +61,7 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}, timeoutMs: 
     ...options.headers,
   };
 
-  console.log(`[API] Making request to: ${url}`);
-  console.log(`[API] Request options:`, { method: options.method || 'GET', headers });
+  console.log(`[API] ${options.method || 'GET'} ${endpoint}`);
 
   // Create abort controller for timeout
   const controller = new AbortController();
@@ -65,18 +76,17 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}, timeoutMs: 
 
     clearTimeout(timeoutId);
 
-    console.log(`[API] Response status: ${response.status}`);
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error(`[API] Error response:`, errorData);
+      console.error(`[API] Error response (${endpoint}):`, errorData);
       throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
     }
 
     const result = await response.json();
-    console.log(`[API] Success response:`, result);
+    // Avoid logging full response bodies: recipe payloads embed base64 images
+    // and can be several MB, which makes devtools formatting genuinely slow.
     if (isGet) writeCache(endpoint, result);
-    else invalidateCache();
+    else invalidateCache(getResourcePrefix(endpoint));
     return result;
   } catch (error: any) {
     clearTimeout(timeoutId);

@@ -54,6 +54,8 @@ export function RecipeCard({ recipe, selectionMode = false, isSelected = false, 
           <img
             src={recipe.image}
             alt={recipe.name}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
