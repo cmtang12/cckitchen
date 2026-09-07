@@ -1,8 +1,6 @@
 import React, { lazy, Suspense } from "react";
 import { createBrowserRouter, redirect } from "react-router";
 import { RootLayout } from "./components/RootLayout";
-import { Dashboard } from "./pages/Dashboard";
-import { MealPlans } from "./pages/MealPlans";
 import { Login } from "./pages/Login";
 import { ResetPassword } from "./pages/ResetPassword";
 import { getSession } from "./utils/auth";
@@ -10,9 +8,12 @@ import { getSession } from "./utils/auth";
 const RecipesLibrary = lazy(() => import("./pages/RecipesLibrary").then(m => ({ default: m.RecipesLibrary })));
 const RecipeDetail = lazy(() => import("./pages/RecipeDetail").then(m => ({ default: m.RecipeDetail })));
 const ImportRecipe = lazy(() => import("./pages/ImportRecipe").then(m => ({ default: m.ImportRecipe })));
+const MealPlans = lazy(() => import("./pages/MealPlans").then(m => ({ default: m.MealPlans })));
 const MealPlanDetail = lazy(() => import("./pages/MealPlanDetail").then(m => ({ default: m.MealPlanDetail })));
 const EditMealPlan = lazy(() => import("./pages/EditMealPlan").then(m => ({ default: m.EditMealPlan })));
 const GroceryList = lazy(() => import("./pages/GroceryList").then(m => ({ default: m.GroceryList })));
+// Dashboard pulls in recharts, which is otherwise dead weight on every other page.
+const Dashboard = lazy(() => import("./pages/Dashboard").then(m => ({ default: m.Dashboard })));
 const TestPage = lazy(() => import("./pages/TestPage").then(m => ({ default: m.TestPage })));
 const TestRecipeSave = lazy(() => import("./pages/TestRecipeSave").then(m => ({ default: m.TestRecipeSave })));
 
@@ -76,9 +77,13 @@ export const router = createBrowserRouter([
           </Suspense>
         )
       },
-      { 
-        path: "meal-plans", 
-        element: <MealPlans />
+      {
+        path: "meal-plans",
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <MealPlans />
+          </Suspense>
+        )
       },
       { 
         path: "meal-plans/:id", 
@@ -104,9 +109,13 @@ export const router = createBrowserRouter([
           </Suspense>
         )
       },
-      { 
-        path: "dashboard", 
-        element: <Dashboard />
+      {
+        path: "dashboard",
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <Dashboard />
+          </Suspense>
+        )
       },
       {
         path: "test",
