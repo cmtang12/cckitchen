@@ -24,7 +24,8 @@ export function RootLayout() {
       {/* Main Content Area */}
       <div className="flex-1 min-w-0 md:ml-16 pb-20 md:pb-0">
         {/* Mobile top bar - in normal document flow so it never overlaps page content */}
-        <div className="md:hidden flex items-center justify-end h-12 px-4 border-b border-border bg-background">
+        <div className="md:hidden flex items-center justify-between h-12 px-4 border-b border-border bg-background">
+          <span className="text-sm font-semibold text-foreground">C&C's Kitchen</span>
           <button
             onClick={handleLogout}
             className="p-2 -mr-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"

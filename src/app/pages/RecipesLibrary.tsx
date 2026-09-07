@@ -349,11 +349,6 @@ export function RecipesLibrary() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-10">
-        <h1 className="text-2xl font-semibold text-foreground">C&C's Kitchen</h1>
-      </div>
-
       {/* Onboarding Banner */}
       {recipes.length === 0 && !hasFilters && (
         <div className="mb-8">
