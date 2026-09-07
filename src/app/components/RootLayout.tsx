@@ -3,7 +3,6 @@ import { Outlet, Link, useNavigate } from "react-router";
 import { Sidebar } from "./Sidebar";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { Plus, LogOut } from "lucide-react";
-import { Button } from "./ui/button";
 import { logout } from "../utils/auth";
 
 
@@ -19,11 +18,22 @@ export function RootLayout() {
     <div className="min-h-screen bg-background flex overflow-x-hidden">
       {/* Desktop Sidebar - hidden on mobile */}
       <div className="hidden md:block">
-        <Sidebar />
+        <Sidebar onLogout={handleLogout} />
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 min-w-0 md:ml-16 pb-20 md:pb-0">
+        {/* Mobile top bar - in normal document flow so it never overlaps page content */}
+        <div className="md:hidden flex items-center justify-end h-12 px-4 border-b border-border bg-background">
+          <button
+            onClick={handleLogout}
+            className="p-2 -mr-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            title="Logout"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+
         <main className="min-h-screen">
           <Outlet />
         </main>
@@ -42,15 +52,6 @@ export function RootLayout() {
           </div>
         </Link>
       </div>
-
-      {/* Logout Button */}
-      <button
-        onClick={handleLogout}
-        className="fixed top-4 right-4 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors z-50"
-        title="Logout"
-      >
-        <LogOut className="w-4 h-4" />
-      </button>
     </div>
   );
 }
