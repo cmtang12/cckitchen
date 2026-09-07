@@ -51,10 +51,8 @@ function DropZone({ index, onDrop }: DropZoneProps) {
   return (
     <div
       ref={drop}
-      className={`transition-all ${
-        isOver
-          ? "h-16 border-2 border-dashed border-primary bg-primary/5 rounded-lg my-2"
-          : "h-2 my-1"
+      className={`h-3 my-1 rounded-lg border-2 border-dashed transition-colors ${
+        isOver ? "border-primary bg-primary/5" : "border-transparent"
       }`}
     />
   );
