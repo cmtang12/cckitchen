@@ -645,6 +645,10 @@ export function EditMealPlan() {
                 </div>
 
                 <ScrollArea className="h-[calc(100vh-280px)]">
+                  {/* Radix ScrollArea's viewport wrapper is display:table, which
+                      sizes to content's max-content width and breaks truncation.
+                      Forcing a definite width here makes it respect the container. */}
+                  <div style={{ width: 1, minWidth: "100%" }}>
                   {mealPlan.meals.length > 0 ? (
                     <div className="pr-4">
                       {mealPlan.meals.map((meal, index) => {
@@ -730,6 +734,7 @@ export function EditMealPlan() {
                       </p>
                     </div>
                   )}
+                  </div>
                 </ScrollArea>
               </CardContent>
             </Card>
@@ -759,6 +764,7 @@ export function EditMealPlan() {
                 </div>
 
                 <ScrollArea className="h-[calc(100vh-340px)]">
+                  <div style={{ width: 1, minWidth: "100%" }}>
                   {filteredRecipes.length > 0 ? (
                     <div className="space-y-2 pr-4">
                       {filteredRecipes.map((recipe) => {
@@ -806,6 +812,7 @@ export function EditMealPlan() {
                       </p>
                     </div>
                   )}
+                  </div>
                 </ScrollArea>
               </CardContent>
             </Card>
@@ -840,6 +847,7 @@ export function EditMealPlan() {
               </div>
 
               <ScrollArea className="flex-1 pr-3">
+                <div style={{ width: 1, minWidth: "100%" }}>
                 {availableSwapRecipes.length > 0 ? (
                   <div className="space-y-2">
                     {availableSwapRecipes.map((recipe) => {
@@ -891,6 +899,7 @@ export function EditMealPlan() {
                     </p>
                   </div>
                 )}
+                </div>
               </ScrollArea>
             </div>
           </DialogContent>
