@@ -118,9 +118,10 @@ export function ImportRecipe() {
   const [instagramPhotoPreview, setInstagramPhotoPreview] = useState<string>("");
   const [ocrProgress, setOcrProgress] = useState<number>(0);
   
-  // Manual OCR state
-  const [manualPhotoFile, setManualPhotoFile] = useState<File | null>(null);
-  const [manualPhotoPreview, setManualPhotoPreview] = useState<string>("");
+  // Manual OCR state - arrays so a recipe that doesn't fit in one screenshot
+  // can be scanned from several photos, combined in upload order.
+  const [manualPhotoPreviews, setManualPhotoPreviews] = useState<string[]>([]);
+  const [manualPhotoTexts, setManualPhotoTexts] = useState<string[]>([]);
   const [isManualOcr, setIsManualOcr] = useState(false);
 
   const handleExtractFromUrl = async () => {
@@ -292,6 +293,162 @@ export function ImportRecipe() {
       return;
     }
     setShowReview(true);
+  };
+
+  // Resize an image to a max width for faster OCR, mirroring the single-photo flow.
+  const resizeImageForOcr = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width = img.width;
+        let height = img.height;
+        const maxWidth = 1200;
+
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          resolve(blob ? new File([blob], file.name, { type: 'image/jpeg' }) : file);
+        }, 'image/jpeg', 0.9);
+      };
+      img.onerror = () => resolve(file);
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  // Parse the combined OCR text from every uploaded screenshot and populate the form.
+  const applyParsedRecipeText = async (combinedText: string) => {
+    if (!combinedText || combinedText.trim().length < 20) {
+      toast.error("Could not extract enough text from the image(s). Please try clearer photos.");
+      return;
+    }
+
+    toast.success("Text extracted! Now parsing recipe...", { duration: 2000 });
+
+    try {
+      const extractedData = await extractionAPI.parseRecipeText(combinedText);
+
+      if (extractedData.name) setRecipeName(extractedData.name);
+      if (extractedData.servings) setServings(extractedData.servings);
+      if (extractedData.cookingTime) setCookingTime(extractedData.cookingTime);
+      if (extractedData.cookingMethod && extractedData.cookingMethod.length > 0) {
+        setSelectedMethods(extractedData.cookingMethod as CookingMethod[]);
+      }
+      if (extractedData.ingredients && extractedData.ingredients.length > 0) {
+        setIngredients(extractedData.ingredients);
+      }
+      if (extractedData.instructions && extractedData.instructions.length > 0) {
+        setInstructions(extractedData.instructions);
+      }
+
+      toast.success("Recipe extracted from photo! Review the details below.");
+    } catch (apiError: any) {
+      console.error("API parsing error:", apiError);
+      toast.error("Failed to parse recipe. Please enter details manually.");
+    }
+  };
+
+  // Run OCR on newly-added screenshots, append their text to any already scanned,
+  // then re-parse everything combined so a recipe split across photos comes
+  // together as one recipe.
+  const handleManualPhotosUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    if (selectedFiles.length === 0) return;
+
+    const oversized = selectedFiles.find((f) => f.size > 10 * 1024 * 1024);
+    if (oversized) {
+      toast.error("Each image must be under 10MB.");
+      e.target.value = '';
+      return;
+    }
+
+    e.target.value = '';
+
+    const newPreviews = await Promise.all(
+      selectedFiles.map(
+        (file) =>
+          new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+              const dataUrl = reader.result as string;
+              try {
+                resolve(await compressImage(dataUrl, 800, 600, 0.75));
+              } catch (error) {
+                console.error("[Import] Failed to compress manual preview, using original:", error);
+                resolve(dataUrl);
+              }
+            };
+            reader.readAsDataURL(file);
+          })
+      )
+    );
+    setManualPhotoPreviews((prev) => [...prev, ...newPreviews]);
+
+    setIsManualOcr(true);
+    setOcrProgress(0);
+
+    try {
+      toast.info(
+        selectedFiles.length > 1 ? "Scanning text from images..." : "Scanning text from image...",
+        { duration: 2000 }
+      );
+
+      let completedCount = 0;
+      const { createWorker } = await import('tesseract.js');
+      const worker = await createWorker('eng', 1, {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            const overallProgress = ((completedCount + m.progress) / selectedFiles.length) * 100;
+            setOcrProgress(Math.round(overallProgress));
+          }
+        },
+      });
+
+      const newTexts: string[] = [];
+      for (const selectedFile of selectedFiles) {
+        const resizedImage = await resizeImageForOcr(selectedFile);
+        const { data } = await worker.recognize(resizedImage);
+        newTexts.push(data.text);
+        completedCount++;
+        setOcrProgress(Math.round((completedCount / selectedFiles.length) * 100));
+      }
+
+      await worker.terminate();
+
+      const combinedTexts = [...manualPhotoTexts, ...newTexts];
+      setManualPhotoTexts(combinedTexts);
+
+      await applyParsedRecipeText(combinedTexts.join("\n\n"));
+    } catch (error: any) {
+      console.error("OCR error:", error);
+      toast.error("Failed to extract text from image. Please try entering manually.");
+    } finally {
+      setIsManualOcr(false);
+      setOcrProgress(0);
+    }
+  };
+
+  // Remove one screenshot and re-parse the remaining ones combined.
+  const handleRemoveManualPhoto = async (index: number) => {
+    const remainingTexts = manualPhotoTexts.filter((_, i) => i !== index);
+    setManualPhotoPreviews((prev) => prev.filter((_, i) => i !== index));
+    setManualPhotoTexts(remainingTexts);
+
+    const input = document.getElementById('manual-photo-upload') as HTMLInputElement;
+    if (input) input.value = '';
+
+    if (remainingTexts.length > 0) {
+      await applyParsedRecipeText(remainingTexts.join("\n\n"));
+    }
   };
 
   const handleParseInstagramText = async () => {
@@ -1175,150 +1332,15 @@ export function ImportRecipe() {
                 {/* Photo Upload with OCR */}
                 <div>
                   <Label className="mb-2 block">Scan Recipe from Photo (Optional)</Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    If the recipe doesn't fit in one screenshot, upload multiple and they'll be combined.
+                  </p>
                   <div className="border-2 border-dashed border-border/50 rounded-lg p-6 text-center hover:border-primary/30 transition-colors">
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-
-                        // Validate file size (max 10MB)
-                        if (file.size > 10 * 1024 * 1024) {
-                          toast.error("Image is too large. Please upload an image under 10MB.");
-                          return;
-                        }
-
-                        setManualPhotoFile(file);
-
-                        // Create preview with compression
-                        const reader = new FileReader();
-                        reader.onloadend = async () => {
-                          const dataUrl = reader.result as string;
-                          try {
-                            console.log("[Import] Compressing manual photo preview...");
-                            const compressedImage = await compressImage(dataUrl, 800, 600, 0.75);
-                            setManualPhotoPreview(compressedImage);
-                            console.log("[Import] Manual photo preview compressed successfully");
-                          } catch (error) {
-                            console.error("[Import] Failed to compress manual preview, using original:", error);
-                            setManualPhotoPreview(dataUrl);
-                          }
-                        };
-                        reader.readAsDataURL(file);
-
-                        // Start OCR
-                        setIsManualOcr(true);
-                        setOcrProgress(0);
-
-                        try {
-                          toast.info("Scanning text from image...", { duration: 2000 });
-
-                          // Resize image to max 1200px width for faster OCR
-                          const resizedImage = await new Promise<File>((resolve) => {
-                            const img = new Image();
-                            img.onload = () => {
-                              const canvas = document.createElement('canvas');
-                              const ctx = canvas.getContext('2d');
-                              
-                              let width = img.width;
-                              let height = img.height;
-                              const maxWidth = 1200;
-                              
-                              if (width > maxWidth) {
-                                height = (height * maxWidth) / width;
-                                width = maxWidth;
-                              }
-                              
-                              canvas.width = width;
-                              canvas.height = height;
-                              ctx?.drawImage(img, 0, 0, width, height);
-                              
-                              canvas.toBlob((blob) => {
-                                if (blob) {
-                                  resolve(new File([blob], file.name, { type: 'image/jpeg' }));
-                                } else {
-                                  resolve(file);
-                                }
-                              }, 'image/jpeg', 0.9);
-                            };
-                            img.onerror = () => resolve(file);
-                            img.src = URL.createObjectURL(file);
-                          });
-
-                          // Dynamic import and create worker
-                          const { createWorker } = await import('tesseract.js');
-                          
-                          const worker = await createWorker('eng', 1, {
-                            logger: (m) => {
-                              if (m.status === 'recognizing text') {
-                                setOcrProgress(Math.round(m.progress * 100));
-                              }
-                            },
-                          });
-
-                          const { data } = await worker.recognize(resizedImage);
-                          await worker.terminate();
-
-                          const extractedText = data.text;
-                          console.log("OCR extracted text length:", extractedText.length);
-
-                          if (!extractedText || extractedText.trim().length < 20) {
-                            toast.error("Could not extract enough text from the image. Please try a clearer photo.");
-                            setIsManualOcr(false);
-                            return;
-                          }
-
-                          toast.success("Text extracted! Now parsing recipe...", { duration: 2000 });
-
-                          // Parse the extracted text with timeout protection
-                          try {
-                            const extractedData = await extractionAPI.parseRecipeText(extractedText);
-
-                            // Set extracted data
-                            if (extractedData.name) {
-                              setRecipeName(extractedData.name);
-                            }
-
-                            if (extractedData.servings) {
-                              setServings(extractedData.servings);
-                            }
-
-                            if (extractedData.cookingTime) {
-                              setCookingTime(extractedData.cookingTime);
-                            }
-
-                            if (extractedData.cookingMethod && extractedData.cookingMethod.length > 0) {
-                              setSelectedMethods(extractedData.cookingMethod as CookingMethod[]);
-                            }
-
-                            if (extractedData.ingredients && extractedData.ingredients.length > 0) {
-                              setIngredients(extractedData.ingredients);
-                            }
-
-                            if (extractedData.instructions && extractedData.instructions.length > 0) {
-                              setInstructions(extractedData.instructions);
-                            }
-
-                            toast.success("Recipe extracted from photo! Review the details below.");
-                          } catch (apiError: any) {
-                            console.error("API parsing error:", apiError);
-                            toast.error("Failed to parse recipe. Please enter details manually.");
-                          }
-
-                        } catch (error: any) {
-                          console.error("OCR error:", error);
-                          
-                          if (error.message === 'Parse timeout') {
-                            toast.error("Text extraction took too long. Please try entering the recipe manually.");
-                          } else {
-                            toast.error("Failed to extract text from image. Please try entering manually.");
-                          }
-                        } finally {
-                          setIsManualOcr(false);
-                          setOcrProgress(0);
-                        }
-                      }}
+                      multiple
+                      onChange={handleManualPhotosUpload}
                       className="hidden"
                       id="manual-photo-upload"
                       disabled={isManualOcr}
@@ -1326,33 +1348,33 @@ export function ImportRecipe() {
                     <label htmlFor="manual-photo-upload" className="cursor-pointer">
                       <Scan className="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
                       <p className="font-medium text-foreground mb-1 text-sm">
-                        Scan recipe from photo
+                        {manualPhotoPreviews.length > 0 ? "Add another screenshot" : "Scan recipe from photo"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Click to upload • PNG, JPG up to 10MB
+                        Click to upload • PNG, JPG up to 10MB each
                       </p>
                     </label>
                   </div>
-                  {manualPhotoPreview && (
-                    <div className="mt-3 relative">
-                      <img 
-                        src={manualPhotoPreview} 
-                        alt="Preview" 
-                        className="w-full h-32 object-cover rounded-lg border border-border/50"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm hover:bg-background"
-                        onClick={() => {
-                          setManualPhotoFile(null);
-                          setManualPhotoPreview("");
-                          const input = document.getElementById('manual-photo-upload') as HTMLInputElement;
-                          if (input) input.value = '';
-                        }}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
+                  {manualPhotoPreviews.length > 0 && (
+                    <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {manualPhotoPreviews.map((preview, index) => (
+                        <div key={index} className="relative">
+                          <img
+                            src={preview}
+                            alt={`Screenshot ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg border border-border/50"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-1 right-1 h-6 w-6 bg-background/80 backdrop-blur-sm hover:bg-background"
+                            onClick={() => handleRemoveManualPhoto(index)}
+                            disabled={isManualOcr}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   )}
                   {isManualOcr && (
