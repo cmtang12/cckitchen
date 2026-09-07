@@ -130,12 +130,12 @@ export function MealPlanDetail() {
           Back to Meal Plans
         </Button>
 
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold text-foreground mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl font-bold text-foreground mb-2 break-words">
               {mealPlan.name}
             </h1>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4" />
                 <span>{new Date(mealPlan.dateCreated).toLocaleDateString()}</span>
@@ -147,7 +147,7 @@ export function MealPlanDetail() {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 shrink-0">
             <Button
               variant="outline"
               size="sm"
@@ -278,10 +278,10 @@ export function MealPlanDetail() {
                           />
                         )}
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-medium text-foreground hover:text-primary transition-colors mb-2">
+                          <h3 className="text-lg font-medium text-foreground hover:text-primary transition-colors mb-2 truncate">
                             {recipe.name}
                           </h3>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center gap-1.5">
                               <Clock className="w-4 h-4" />
                               <span>{formatCookingTime(recipe.cookingTime)}</span>
