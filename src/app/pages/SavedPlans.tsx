@@ -6,7 +6,14 @@ import { Input } from "../components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { Badge } from "../components/ui/badge";
-import { FolderHeart, Loader2, Pencil, Trash2, Plus, Search, X, Check, UtensilsCrossed, RefreshCw } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import { FolderHeart, Loader2, Pencil, Trash2, Plus, Search, X, Check, UtensilsCrossed, RefreshCw, ArrowUpDown } from "lucide-react";
 import { MealPlan, Recipe, PlannedMeal } from "../types";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router";
@@ -246,6 +253,8 @@ function GroupDropTarget({ groupMeals, onDrop, children }: GroupDropTargetProps)
   );
 }
 
+type SortOption = "newest" | "oldest" | "az" | "za";
+
 export function SavedPlans() {
   const [mealPlans, setMealPlans] = useState<MealPlan[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -253,6 +262,7 @@ export function SavedPlans() {
   const [editingPlan, setEditingPlan] = useState<MealPlan | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddingRecipes, setIsAddingRecipes] = useState(false);
+  const [sortOption, setSortOption] = useState<SortOption>("newest");
   
   // Swap modal state
   const [swapModalOpen, setSwapModalOpen] = useState(false);
@@ -361,6 +371,20 @@ export function SavedPlans() {
   const filteredRecipes = recipes.filter((recipe) =>
     recipe.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const sortedMealPlans = [...mealPlans].sort((a, b) => {
+    switch (sortOption) {
+      case "oldest":
+        return new Date(a.dateCreated).getTime() - new Date(b.dateCreated).getTime();
+      case "az":
+        return a.name.localeCompare(b.name);
+      case "za":
+        return b.name.localeCompare(a.name);
+      case "newest":
+      default:
+        return new Date(b.dateCreated).getTime() - new Date(a.dateCreated).getTime();
+    }
+  });
 
   // Group meals by mealGroupId
   const groupMeals = (meals: PlannedMeal[]) => {
@@ -542,8 +566,23 @@ export function SavedPlans() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {mealPlans.map((plan) => {
+        <>
+          <div className="mb-4 flex justify-end">
+            <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
+              <SelectTrigger className="w-[180px] rounded-lg border-border/50">
+                <ArrowUpDown className="w-4 h-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest first</SelectItem>
+                <SelectItem value="oldest">Oldest first</SelectItem>
+                <SelectItem value="az">Name (A-Z)</SelectItem>
+                <SelectItem value="za">Name (Z-A)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {sortedMealPlans.map((plan) => {
             const recipeCount = plan.meals.length;
             const planRecipes = plan.meals
               .map((m) => getRecipeById(m.recipeId))
@@ -633,7 +672,8 @@ export function SavedPlans() {
               </Card>
             );
           })}
-        </div>
+          </div>
+        </>
       )}
 
       {/* Edit Plan Dialog */}
