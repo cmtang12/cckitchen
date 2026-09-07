@@ -26,7 +26,6 @@ import {
   Globe,
   Camera,
   PenLine,
-  ImageUp,
   Scan
 } from "lucide-react";
 import Tesseract from "tesseract.js";
@@ -85,6 +84,88 @@ const cuisineTypeLabels: Record<CuisineType, string> = {
   "hispanic": "Hispanic",
 };
 
+interface RecipePhotoScannerProps {
+  inputId: string;
+  previews: string[];
+  isScanning: boolean;
+  progress: number;
+  onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onRemove: (index: number) => void;
+}
+
+// Shared by the "Photo" and "Manual" tabs so screenshots uploaded from either
+// one land in the same combined scan - multiple images are accepted since a
+// recipe doesn't always fit in a single screenshot.
+function RecipePhotoScanner({
+  inputId,
+  previews,
+  isScanning,
+  progress,
+  onUpload,
+  onRemove,
+}: RecipePhotoScannerProps) {
+  return (
+    <div>
+      <div className="border-2 border-dashed border-border/50 rounded-lg p-6 text-center hover:border-primary/30 transition-colors">
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={onUpload}
+          className="hidden"
+          id={inputId}
+          disabled={isScanning}
+        />
+        <label htmlFor={inputId} className="cursor-pointer">
+          <Scan className="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
+          <p className="font-medium text-foreground mb-1 text-sm">
+            {previews.length > 0 ? "Add another screenshot" : "Scan recipe from photo"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Click to upload • PNG, JPG up to 10MB each
+          </p>
+        </label>
+      </div>
+      {previews.length > 0 && (
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {previews.map((preview, index) => (
+            <div key={index} className="relative">
+              <img
+                src={preview}
+                alt={`Screenshot ${index + 1}`}
+                className="w-full h-24 object-cover rounded-lg border border-border/50"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-1 right-1 h-6 w-6 bg-background/80 backdrop-blur-sm hover:bg-background"
+                onClick={() => onRemove(index)}
+                disabled={isScanning}
+              >
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+      {isScanning && (
+        <div className="mt-3 space-y-2">
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span className="text-sm text-foreground">Scanning recipe... {progress}%</span>
+          </div>
+          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-primary h-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ImportRecipe() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"url" | "photo" | "manual">("url");
@@ -93,7 +174,6 @@ export function ImportRecipe() {
 
   // Form state
   const [url, setUrl] = useState("");
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [recipeName, setRecipeName] = useState("");
   const [servings, setServings] = useState<number>(4);
   const [cookingTime, setCookingTime] = useState<number>(30);
@@ -271,22 +351,6 @@ export function ImportRecipe() {
     }
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setPhotoFile(file);
-      // Photo extraction not yet implemented
-      toast.info("Photo extraction is coming soon! Please use URL import or manual entry for now.");
-      // Clear the file
-      setTimeout(() => {
-        setPhotoFile(null);
-        // Reset the input
-        const input = document.getElementById('photo-upload') as HTMLInputElement;
-        if (input) input.value = '';
-      }, 2000);
-    }
-  };
-
   const handleManualEntry = () => {
     if (!recipeName) {
       toast.error("Please enter a recipe name");
@@ -351,6 +415,9 @@ export function ImportRecipe() {
       }
 
       toast.success("Recipe extracted from photo! Review the details below.");
+      // Extraction can be started from the Photo tab, but the results only
+      // render on the Manual Entry tab - jump there so they're visible.
+      setActiveTab("manual");
     } catch (apiError: any) {
       console.error("API parsing error:", apiError);
       toast.error("Failed to parse recipe. Please enter details manually.");
@@ -1279,39 +1346,19 @@ export function ImportRecipe() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="border-2 border-dashed border-border/50 rounded-lg p-8 text-center hover:border-primary/30 transition-colors">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                    id="photo-upload"
-                    disabled={isExtracting}
-                  />
-                  <label htmlFor="photo-upload" className="cursor-pointer">
-                    <ImageUp className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-                    <p className="font-medium text-foreground mb-1">
-                      Click to upload or drag and drop
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      PNG, JPG up to 10MB
-                    </p>
-                  </label>
-                </div>
-                {photoFile && (
-                  <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
-                    <Check className="w-5 h-5 text-primary" />
-                    <span className="text-sm text-primary">{photoFile.name}</span>
-                  </div>
-                )}
-                {isExtracting && (
-                  <div className="flex items-center justify-center gap-2 py-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                    <span className="text-foreground">AI is reading your recipe...</span>
-                  </div>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  If the recipe doesn't fit in one screenshot, upload multiple and they'll be combined.
+                </p>
+                <RecipePhotoScanner
+                  inputId="photo-tab-upload"
+                  previews={manualPhotoPreviews}
+                  isScanning={isManualOcr}
+                  progress={ocrProgress}
+                  onUpload={handleManualPhotosUpload}
+                  onRemove={handleRemoveManualPhoto}
+                />
                 <p className="text-sm text-muted-foreground text-center">
-                  AI will scan and extract the recipe from your photo
+                  Extracted details will appear on the Manual Entry tab for you to review.
                 </p>
               </div>
             </CardContent>
@@ -1335,62 +1382,14 @@ export function ImportRecipe() {
                   <p className="text-xs text-muted-foreground mb-2">
                     If the recipe doesn't fit in one screenshot, upload multiple and they'll be combined.
                   </p>
-                  <div className="border-2 border-dashed border-border/50 rounded-lg p-6 text-center hover:border-primary/30 transition-colors">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleManualPhotosUpload}
-                      className="hidden"
-                      id="manual-photo-upload"
-                      disabled={isManualOcr}
-                    />
-                    <label htmlFor="manual-photo-upload" className="cursor-pointer">
-                      <Scan className="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
-                      <p className="font-medium text-foreground mb-1 text-sm">
-                        {manualPhotoPreviews.length > 0 ? "Add another screenshot" : "Scan recipe from photo"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Click to upload • PNG, JPG up to 10MB each
-                      </p>
-                    </label>
-                  </div>
-                  {manualPhotoPreviews.length > 0 && (
-                    <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {manualPhotoPreviews.map((preview, index) => (
-                        <div key={index} className="relative">
-                          <img
-                            src={preview}
-                            alt={`Screenshot ${index + 1}`}
-                            className="w-full h-24 object-cover rounded-lg border border-border/50"
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute top-1 right-1 h-6 w-6 bg-background/80 backdrop-blur-sm hover:bg-background"
-                            onClick={() => handleRemoveManualPhoto(index)}
-                            disabled={isManualOcr}
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {isManualOcr && (
-                    <div className="mt-3 space-y-2">
-                      <div className="flex items-center justify-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                        <span className="text-sm text-foreground">Scanning recipe... {ocrProgress}%</span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                        <div 
-                          className="bg-primary h-full transition-all duration-300"
-                          style={{ width: `${ocrProgress}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
+                  <RecipePhotoScanner
+                    inputId="manual-photo-upload"
+                    previews={manualPhotoPreviews}
+                    isScanning={isManualOcr}
+                    progress={ocrProgress}
+                    onUpload={handleManualPhotosUpload}
+                    onRemove={handleRemoveManualPhoto}
+                  />
                 </div>
 
                 <div className="relative">
