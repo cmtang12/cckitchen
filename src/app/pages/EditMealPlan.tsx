@@ -159,7 +159,6 @@ interface DraggableGroupedRecipeCardProps {
   onDrop: (draggedMealId: string, targetMealId: string) => void;
   onOpenSwap: () => void;
   onRemove: () => void;
-  onUngroup: () => void;
 }
 
 function DraggableGroupedRecipeCard({
@@ -168,7 +167,6 @@ function DraggableGroupedRecipeCard({
   onDrop,
   onOpenSwap,
   onRemove,
-  onUngroup,
 }: DraggableGroupedRecipeCardProps) {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: RECIPE_CARD_TYPE,
@@ -219,18 +217,6 @@ function DraggableGroupedRecipeCard({
         </p>
       </div>
       <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={(e) => {
-            e.stopPropagation();
-            onUngroup();
-          }}
-          className="flex-shrink-0 h-7 w-7 text-muted-foreground hover:text-amber-600 hover:bg-amber-50/50"
-          title="Ungroup recipe"
-        >
-          <UtensilsCrossed className="w-3.5 h-3.5" />
-        </Button>
         <Button
           variant="ghost"
           size="icon"
@@ -555,27 +541,24 @@ export function EditMealPlan() {
     }
   };
 
-  // Handle ungrouping a recipe
-  const handleUngroupRecipe = async (mealId: string) => {
+  // Handle ungrouping an entire complete meal back into individual recipes
+  const handleUngroupGroup = async (mealIds: string[]) => {
     if (!mealPlan) return;
 
     try {
-      let updatedMeals = mealPlan.meals.map((m) =>
-        m.id === mealId ? { ...m, mealGroupId: undefined } : m
+      const updatedMeals = mealPlan.meals.map((m) =>
+        mealIds.includes(m.id) ? { ...m, mealGroupId: undefined } : m
       );
-
-      // Clean up: Remove mealGroupId from groups with only 1 member after ungrouping
-      updatedMeals = cleanupGroups(updatedMeals);
 
       await mealPlanAPI.update(mealPlan.id, {
         meals: updatedMeals,
       });
 
       setMealPlan({ ...mealPlan, meals: updatedMeals });
-      toast.success("Recipe ungrouped");
+      toast.success("Meal ungrouped");
     } catch (error) {
-      console.error("Failed to ungroup recipe:", error);
-      toast.error("Failed to ungroup recipe");
+      console.error("Failed to ungroup meal:", error);
+      toast.error("Failed to ungroup meal");
     }
   };
 
@@ -672,14 +655,28 @@ export function EditMealPlan() {
                             {/* Group header (only for first item in group) */}
                             {isGrouped && isFirstInGroup && (
                               <GroupDropTarget groupMeals={groupMeals} onDrop={handleDropRecipeOnRecipe}>
-                                <div className="flex items-center gap-2 mb-2">
-                                  <UtensilsCrossed className="w-4 h-4 text-primary" />
-                                  <span className="text-xs font-medium text-primary">
-                                    Complete Meal
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    ({groupMeals.length} recipes)
-                                  </span>
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <UtensilsCrossed className="w-4 h-4 text-primary" />
+                                    <span className="text-xs font-medium text-primary">
+                                      Complete Meal
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      ({groupMeals.length} recipes)
+                                    </span>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleUngroupGroup(groupMeals.map((m) => m.id));
+                                    }}
+                                    className="flex-shrink-0 h-6 w-6 text-muted-foreground hover:text-amber-600 hover:bg-amber-50/50"
+                                    title="Ungroup meal"
+                                  >
+                                    <UtensilsCrossed className="w-3.5 h-3.5" />
+                                  </Button>
                                 </div>
                                 {groupMeals.map((groupMeal) => {
                                   const groupRecipe = getRecipeById(groupMeal.recipeId);
@@ -693,7 +690,6 @@ export function EditMealPlan() {
                                       onDrop={handleDropRecipeOnRecipe}
                                       onOpenSwap={() => handleOpenSwapModal(groupMeal)}
                                       onRemove={() => handleRemoveRecipe(groupMeal.id)}
-                                      onUngroup={() => handleUngroupRecipe(groupMeal.id)}
                                     />
                                   );
                                 })}
