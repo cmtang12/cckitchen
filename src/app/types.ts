@@ -72,6 +72,7 @@ export interface MealPlan {
   rules: MealPlanRule;
   meals: PlannedMeal[];
   aiInsights?: AIInsights;
+  notes?: string; // Freeform notes about the plan as a whole (e.g. prep tips)
 }
 
 export interface PlannedMeal {
@@ -80,6 +81,7 @@ export interface PlannedMeal {
   dayOfWeek: number; // 0-6
   mealType?: 'breakfast' | 'lunch' | 'dinner';
   mealGroupId?: string; // Groups related recipes together (main + sides)
+  comment?: string; // Note for this meal; shared across all members of a group
 }
 
 export interface AIInsights {
