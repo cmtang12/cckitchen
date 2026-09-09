@@ -90,6 +90,7 @@ interface MealPlan {
   rules: any;
   meals: PlannedMeal[];
   aiInsights?: any;
+  notes?: string;
 }
 
 interface PlannedMeal {
@@ -98,6 +99,7 @@ interface PlannedMeal {
   dayOfWeek: number;
   mealType?: string;
   mealGroupId?: string; // Groups related recipes together (main + sides)
+  comment?: string;
 }
 
 const app = new Hono();

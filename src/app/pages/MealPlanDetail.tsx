@@ -5,6 +5,7 @@ import { Recipe, MealPlan, PlannedMeal } from "../types";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
+import { Textarea } from "../components/ui/textarea";
 import {
   ArrowLeft,
   Loader2,
@@ -14,9 +15,95 @@ import {
   Users,
   Trash2,
   Pencil,
+  MessageSquare,
+  NotebookPen,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCookingTime } from "../utils/formatTime";
+
+// Compact inline note editor, reused for both the per-meal comment and the
+// overall meal-plan notes. Stops propagation so it can sit inside a card
+// that's otherwise a navigation link.
+interface InlineNoteProps {
+  value?: string;
+  onSave: (text: string) => void;
+  placeholder: string;
+  emptyLabel: string;
+}
+
+function InlineNote({ value, onSave, placeholder, emptyLabel }: InlineNoteProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(value || "");
+
+  const startEditing = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDraft(value || "");
+    setIsEditing(true);
+  };
+
+  const cancel = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsEditing(false);
+  };
+
+  const save = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onSave(draft.trim());
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div className="mt-2" onClick={(e) => e.preventDefault()}>
+        <Textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          placeholder={placeholder}
+          className="text-sm min-h-[70px] bg-card"
+          autoFocus
+        />
+        <div className="flex gap-2 mt-2">
+          <Button size="sm" onClick={save} className="h-7 rounded-md">
+            Save
+          </Button>
+          <Button size="sm" variant="ghost" onClick={cancel} className="h-7 rounded-md">
+            Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (value) {
+    return (
+      <div className="mt-2 flex items-start gap-2 rounded-lg bg-muted/50 p-2">
+        <MessageSquare className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+        <p className="flex-1 text-xs text-muted-foreground whitespace-pre-wrap">{value}</p>
+        <button
+          onClick={startEditing}
+          className="flex-shrink-0 text-muted-foreground hover:text-primary"
+          title="Edit note"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={startEditing}
+      className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+    >
+      <MessageSquare className="w-3.5 h-3.5" />
+      {emptyLabel}
+    </button>
+  );
+}
 
 export function MealPlanDetail() {
   const { id } = useParams<{ id: string }>();
@@ -69,6 +156,39 @@ export function MealPlanDetail() {
     } catch (error) {
       console.error("Failed to delete meal plan:", error);
       toast.error("Failed to delete meal plan");
+    }
+  };
+
+  // Save a comment for one meal - a "meal" is a single recipe, or every
+  // recipe in a Complete Meal group, which all carry the same comment so it
+  // reads consistently no matter which member is shown as the group's face.
+  const handleSaveMealComment = async (mealIds: string[], comment: string) => {
+    if (!mealPlan) return;
+
+    try {
+      const updatedMeals = mealPlan.meals.map((m) =>
+        mealIds.includes(m.id) ? { ...m, comment: comment || undefined } : m
+      );
+
+      await mealPlanAPI.update(mealPlan.id, { meals: updatedMeals });
+      setMealPlan({ ...mealPlan, meals: updatedMeals });
+      toast.success("Note saved");
+    } catch (error) {
+      console.error("Failed to save note:", error);
+      toast.error("Failed to save note");
+    }
+  };
+
+  const handleSavePlanNotes = async (notes: string) => {
+    if (!mealPlan) return;
+
+    try {
+      await mealPlanAPI.update(mealPlan.id, { notes: notes || undefined });
+      setMealPlan({ ...mealPlan, notes: notes || undefined });
+      toast.success("Notes saved");
+    } catch (error) {
+      console.error("Failed to save notes:", error);
+      toast.error("Failed to save notes");
     }
   };
 
@@ -169,6 +289,25 @@ export function MealPlanDetail() {
         </div>
       </div>
 
+      {/* Overall Plan Notes */}
+      <Card className="border-border/50 mb-6">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground mb-1">
+            <NotebookPen className="w-4 h-4 text-primary" />
+            Notes
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Jot down whether you'd repeat this plan or how to prep for it.
+          </p>
+          <InlineNote
+            value={mealPlan.notes}
+            onSave={handleSavePlanNotes}
+            placeholder="e.g. Chop all veggies Sunday night, this combo reheats great..."
+            emptyLabel="Add notes about this meal plan"
+          />
+        </CardContent>
+      </Card>
+
       {/* Meal Plan Content */}
       <div className="space-y-6">
         {mealPlan.meals.length === 0 ? (
@@ -251,6 +390,13 @@ export function MealPlanDetail() {
                         );
                       })}
                     </div>
+
+                    <InlineNote
+                      value={group[0]?.comment}
+                      onSave={(text) => handleSaveMealComment(group.map((m) => m.id), text)}
+                      placeholder="e.g. Loved this pairing, make again! Prep the rice the night before..."
+                      emptyLabel="Add a note for this meal"
+                    />
                   </CardContent>
                 </Card>
               );
@@ -291,6 +437,13 @@ export function MealPlanDetail() {
                               <span>{recipe.servings} servings</span>
                             </div>
                           </div>
+
+                          <InlineNote
+                            value={meal.comment}
+                            onSave={(text) => handleSaveMealComment([meal.id], text)}
+                            placeholder="e.g. Loved this one, make again! Prep the marinade the night before..."
+                            emptyLabel="Add a note for this meal"
+                          />
                         </div>
                       </div>
                     </CardContent>
