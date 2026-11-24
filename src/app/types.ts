@@ -17,6 +17,10 @@ export interface Recipe {
   id: string;
   name: string;
   image?: string;
+  /** Set on the photo-free list: the recipe has a photo that loads separately. */
+  hasImage?: boolean;
+  /** Fingerprint of the photo, so a saved copy is refreshed when it changes. */
+  imageVersion?: string;
   source?: string;
   servings: number;
   cookingTime: number; // in minutes

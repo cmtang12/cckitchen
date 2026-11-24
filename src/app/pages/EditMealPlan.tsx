@@ -29,6 +29,8 @@ import {
   DialogDescription,
 } from "../components/ui/dialog";
 import { tagLabel, methodLabel } from "../utils/recipeOptions";
+import { RecipeImage } from "../components/RecipeImage";
+import { hasPhoto } from "../services/recipeImages";
 
 const RECIPE_CARD_TYPE = "RECIPE_CARD";
 
@@ -104,9 +106,9 @@ function DraggableRecipeCard({
           : "border-border/50 hover:border-border"
       }`}
     >
-      {recipe.image && (
-        <img
-          src={recipe.image}
+      {hasPhoto(recipe) && (
+        <RecipeImage
+          recipe={recipe}
           alt={recipe.name}
           draggable={false}
           className="w-16 h-16 rounded object-cover"
@@ -198,9 +200,9 @@ function DraggableGroupedRecipeCard({
           : "border-border/30"
       }`}
     >
-      {recipe.image && (
-        <img
-          src={recipe.image}
+      {hasPhoto(recipe) && (
+        <RecipeImage
+          recipe={recipe}
           alt={recipe.name}
           draggable={false}
           className="w-12 h-12 rounded object-cover"
@@ -780,9 +782,9 @@ export function EditMealPlan() {
                                 : "border-border/50 hover:border-primary/30 hover:bg-accent"
                             }`}
                           >
-                            {recipe.image && (
-                              <img
-                                src={recipe.image}
+                            {hasPhoto(recipe) && (
+                              <RecipeImage
+                                recipe={recipe}
                                 alt={recipe.name}
                                 className="w-12 h-12 rounded object-cover"
                               />
@@ -854,9 +856,9 @@ export function EditMealPlan() {
                           onClick={() => handleSwapRecipe(recipe.id)}
                           className="w-full flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:border-primary/30 hover:bg-accent transition-all text-left"
                         >
-                          {recipe.image && (
-                            <img
-                              src={recipe.image}
+                          {hasPhoto(recipe) && (
+                            <RecipeImage
+                              recipe={recipe}
                               alt={recipe.name}
                               className="w-16 h-16 rounded object-cover"
                             />

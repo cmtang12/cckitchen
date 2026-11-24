@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCookingTime } from "../utils/formatTime";
+import { RecipeImage } from "../components/RecipeImage";
+import { hasPhoto } from "../services/recipeImages";
 
 // Compact inline note editor, reused for both the per-meal comment and the
 // overall meal-plan notes. Stops propagation so it can sit inside a card
@@ -356,9 +358,9 @@ export function MealPlanDetail() {
                             <Card className="border-border/30 overflow-hidden hover:border-primary/50 transition-all h-full">
                               <CardContent className="p-3">
                                 <div className="flex gap-3">
-                                  {recipe.image && (
-                                    <img
-                                      src={recipe.image}
+                                  {hasPhoto(recipe) && (
+                                    <RecipeImage
+                                      recipe={recipe}
                                       alt={recipe.name}
                                       className="w-20 h-20 rounded object-cover flex-shrink-0"
                                     />
@@ -416,9 +418,9 @@ export function MealPlanDetail() {
                   <Card className="border-border/50 overflow-hidden hover:border-primary/30 transition-all">
                     <CardContent className="p-4">
                       <div className="flex gap-4">
-                        {recipe.image && (
-                          <img
-                            src={recipe.image}
+                        {hasPhoto(recipe) && (
+                          <RecipeImage
+                            recipe={recipe}
                             alt={recipe.name}
                             className="w-24 h-24 rounded object-cover flex-shrink-0"
                           />

@@ -2,6 +2,8 @@ import { Recipe } from "../types";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "./ui/sheet";
 import { Heart, Bookmark, CalendarPlus, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router";
+import { RecipeImage } from "./RecipeImage";
+import { hasPhoto } from "../services/recipeImages";
 
 interface RecipeQuickActionsProps {
   recipe: Recipe | null;
@@ -62,7 +64,7 @@ export function RecipeQuickActions({
               className="flex items-center gap-3 px-4 pt-5 pb-4 text-left border-b border-border/60"
             >
               <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#f6ede1] shrink-0">
-                {recipe.image && <img src={recipe.image} alt="" className="w-full h-full object-cover" />}
+                {hasPhoto(recipe) && <RecipeImage recipe={recipe} alt="" className="w-full h-full object-cover" />}
               </div>
               <div className="flex-1 min-w-0 pr-6">
                 <SheetTitle className="text-base font-medium leading-snug line-clamp-2">{recipe.name}</SheetTitle>

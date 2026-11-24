@@ -5,6 +5,8 @@ import { Heart, Star, Check, MoreHorizontal } from "lucide-react";
 import { formatCookingTime } from "../utils/formatTime";
 import { methodLabel, allTags, tagLabel } from "../utils/recipeOptions";
 import { CatMark } from "./CatMark";
+import { RecipeImage } from "./RecipeImage";
+import { hasPhoto } from "../services/recipeImages";
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -84,9 +86,9 @@ export function RecipeCard({ recipe, selectionMode = false, isSelected = false, 
           selectionMode && isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
         }`}
       >
-        {recipe.image ? (
-          <img
-            src={recipe.image}
+        {hasPhoto(recipe) ? (
+          <RecipeImage
+            recipe={recipe}
             alt=""
             loading="lazy"
             decoding="async"

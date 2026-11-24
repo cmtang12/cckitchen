@@ -82,3 +82,18 @@ export async function idbDeletePrefix(prefix: string): Promise<void> {
     }
   });
 }
+
+export async function idbDelete(key: string): Promise<void> {
+  const db = await openDB();
+  if (!db) return;
+  await new Promise<void>((resolve) => {
+    try {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    } catch {
+      resolve();
+    }
+  });
+}

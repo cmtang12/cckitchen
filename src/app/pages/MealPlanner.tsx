@@ -42,6 +42,8 @@ import { CookingMethod, RecipeTag, AIInsights, PlannedMeal } from "../types";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { tagLabel, methodLabel } from "../utils/recipeOptions";
+import { RecipeImage } from "../components/RecipeImage";
+import { hasPhoto } from "../services/recipeImages";
 
 const availableMethods: CookingMethod[] = [
   "stovetop",
@@ -411,10 +413,10 @@ export function MealPlanner({ onClose }: MealPlannerProps) {
                   {/* Recipe Content */}
                   <div className="flex-1 flex flex-col sm:flex-row">
                     {/* Recipe Image */}
-                    {recipe.image && (
+                    {hasPhoto(recipe) && (
                       <div className="sm:w-48 h-48 sm:h-auto">
-                        <img
-                          src={recipe.image}
+                        <RecipeImage
+                          recipe={recipe}
                           alt={recipe.name}
                           className="w-full h-full object-cover"
                         />
@@ -618,9 +620,9 @@ export function MealPlanner({ onClose }: MealPlannerProps) {
                 onClick={() => handleSelectRecipe(recipe)}
               >
                 <div className="flex gap-4 p-4">
-                  {recipe.image && (
-                    <img
-                      src={recipe.image}
+                  {hasPhoto(recipe) && (
+                    <RecipeImage
+                      recipe={recipe}
                       alt={recipe.name}
                       className="w-24 h-24 object-cover rounded"
                     />

@@ -21,6 +21,8 @@ import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { formatCookingTime } from "../utils/formatTime";
 import { tagLabel, methodLabel } from "../utils/recipeOptions";
+import { RecipeImage } from "../components/RecipeImage";
+import { hasPhoto } from "../services/recipeImages";
 
 const RECIPE_CARD_TYPE = "RECIPE_CARD";
 
@@ -63,9 +65,9 @@ function DraggableRecipeCard({ meal, recipe, onDrop, onOpenSwap, onRemove }: Dra
           : "border-border/50 hover:border-border"
       }`}
     >
-      {recipe.image && (
-        <img
-          src={recipe.image}
+      {hasPhoto(recipe) && (
+        <RecipeImage
+          recipe={recipe}
           alt={recipe.name}
           draggable={false}
           className="w-16 h-16 rounded object-cover"
@@ -159,9 +161,9 @@ function DraggableGroupedRecipeCard({
           : "border-border/30"
       }`}
     >
-      {recipe.image && (
-        <img
-          src={recipe.image}
+      {hasPhoto(recipe) && (
+        <RecipeImage
+          recipe={recipe}
           alt={recipe.name}
           draggable={false}
           className="w-12 h-12 rounded object-cover"
@@ -620,9 +622,9 @@ export function SavedPlans() {
                           to={`/recipes/${recipe.id}`}
                           className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group/item"
                         >
-                          {recipe.image && (
-                            <img
-                              src={recipe.image}
+                          {hasPhoto(recipe) && (
+                            <RecipeImage
+                              recipe={recipe}
                               alt={recipe.name}
                               className="w-12 h-12 rounded object-cover"
                             />
@@ -836,9 +838,9 @@ export function SavedPlans() {
                                   : "border-border/50 hover:border-primary/30 hover:bg-accent"
                               }`}
                             >
-                              {recipe.image && (
-                                <img
-                                  src={recipe.image}
+                              {hasPhoto(recipe) && (
+                                <RecipeImage
+                                  recipe={recipe}
                                   alt={recipe.name}
                                   className="w-16 h-16 rounded object-cover"
                                 />
@@ -923,9 +925,9 @@ export function SavedPlans() {
                           "border-border/50 hover:border-primary/30 hover:bg-accent"
                         }`}
                       >
-                        {recipe.image && (
-                          <img
-                            src={recipe.image}
+                        {hasPhoto(recipe) && (
+                          <RecipeImage
+                            recipe={recipe}
                             alt={recipe.name}
                             className="w-16 h-16 rounded object-cover"
                           />

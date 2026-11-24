@@ -8,6 +8,8 @@ import { Card } from "../components/ui/card";
 import { Loader2, Check, X, Save } from "lucide-react";
 import { formatCookingTime } from "../utils/formatTime";
 import { tagLabel, methodLabel } from "../utils/recipeOptions";
+import { RecipeImage } from "../components/RecipeImage";
+import { hasPhoto } from "../services/recipeImages";
 
 // Helper function to format cooking time - moved to utils
 
@@ -447,9 +449,9 @@ export function TinderStyle({ onClose }: TinderStyleProps) {
         <Card className="border-border/50 overflow-hidden bg-transparent">
           {/* Recipe Image - Shorter for mobile */}
           <div className="relative h-[340px] sm:h-[420px] overflow-hidden bg-muted rounded-xl">
-            {currentRecipe.image ? (
-              <img
-                src={currentRecipe.image}
+            {hasPhoto(currentRecipe) ? (
+              <RecipeImage
+                recipe={currentRecipe}
                 alt={currentRecipe.name}
                 className="w-full h-full object-cover"
               />
@@ -492,9 +494,9 @@ export function TinderStyle({ onClose }: TinderStyleProps) {
                           className="w-12 h-12 sm:w-14 sm:h-14 rounded-md overflow-hidden border-2 border-white shadow-lg bg-white"
                           title={pairedRecipe.name}
                         >
-                          {pairedRecipe.image ? (
-                            <img 
-                              src={pairedRecipe.image} 
+                          {hasPhoto(pairedRecipe) ? (
+                            <RecipeImage 
+                              recipe={pairedRecipe} 
                               alt={pairedRecipe.name}
                               className="w-full h-full object-cover"
                             />
@@ -577,9 +579,9 @@ export function TinderStyle({ onClose }: TinderStyleProps) {
                 className="relative group"
               >
                 <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-primary/20 bg-muted">
-                  {recipe.image ? (
-                    <img
-                      src={recipe.image}
+                  {hasPhoto(recipe) ? (
+                    <RecipeImage
+                      recipe={recipe}
                       alt={recipe.name}
                       className="w-full h-full object-cover"
                     />

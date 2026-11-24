@@ -1,7 +1,8 @@
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { Recipe, MealPlan } from '../types';
 import { normalizeRecipe } from '../utils/recipeOptions';
-import { idbGet, idbSet, idbDeletePrefix } from './persistentCache';
+import { idbGet, idbSet, idbDelete, idbDeletePrefix } from './persistentCache';
+import { imageVersionOf, rememberImage, loadRecipeImage } from './recipeImages';
 
 const API_BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-9a4224b7`;
 
@@ -23,6 +24,9 @@ interface Entry { data: any; ts: number }
 const memCache = new Map<string, Entry>();
 const inFlight = new Map<string, Promise<any>>();
 const listeners = new Map<string, Set<(data: any) => void>>();
+
+// The old list with photos inline is no longer used; free that space.
+void idbDelete('/recipes');
 
 // Clear the old localStorage cache from before (it could never hold the recipe list).
 try {
@@ -142,56 +146,91 @@ async function request(endpoint: string, options: RequestInit, timeoutMs: number
 }
 
 // Recipe API
+//
+// The list comes without photos (RECIPES_LIST); each photo loads on its own as it
+// scrolls into view. If the server hasn't been updated yet it ignores ?view=summary
+// and sends photos inline, which still works, just slower.
+export const RECIPES_LIST = '/recipes?view=summary';
+
+/** The list version of a recipe: photo swapped for hasImage + imageVersion. */
+function toSummary(recipe: Recipe): Recipe {
+  if (!recipe.image) return { ...recipe, hasImage: !!recipe.hasImage };
+  rememberImage(recipe.id, recipe.image);
+  const { image, ...rest } = recipe;
+  return { ...rest, hasImage: true, imageVersion: imageVersionOf(image) } as Recipe;
+}
+
+/** hasImage / imageVersion only describe the list; never store them on a recipe. */
+function withoutListFields<T extends Partial<Recipe>>(r: T): T {
+  const { hasImage, imageVersion, ...rest } = r as any;
+  return rest;
+}
+
 export const recipeAPI = {
   async getAll(): Promise<Recipe[]> {
-    const data = await fetchAPI('/recipes');
+    const data = await fetchAPI(RECIPES_LIST);
     return (data.recipes || []).map(normalizeRecipe);
   },
 
   async getById(id: string): Promise<Recipe> {
-    // Opening a recipe from the list: use the copy we already have instead of downloading it again.
+    // Opening a recipe from the list: use what we already have, plus its photo.
     if (!memCache.has(`/recipes/${id}`)) {
-      const list = await readCache('/recipes');
-      const fromList = list?.data?.recipes?.find((r: Recipe) => r.id === id);
-      if (fromList) return normalizeRecipe(fromList);
+      const list = await readCache(RECIPES_LIST);
+      const fromList: Recipe | undefined = list?.data?.recipes?.find((r: Recipe) => r.id === id);
+      if (fromList) {
+        if (fromList.image || !fromList.hasImage) return normalizeRecipe(fromList);
+        try {
+          const image = await loadRecipeImage(id, fromList.imageVersion);
+          return normalizeRecipe({ ...fromList, image: image || undefined });
+        } catch {
+          // fall through to loading the whole recipe
+        }
+      }
     }
     const data = await fetchAPI(`/recipes/${id}`);
+    if (data.recipe?.image) rememberImage(id, data.recipe.image);
     return data.recipe ? normalizeRecipe(data.recipe) : data.recipe;
   },
 
   async create(recipe: Omit<Recipe, 'id' | 'dateAdded'>): Promise<Recipe> {
     const data = await fetchAPI('/recipes', {
       method: 'POST',
-      body: JSON.stringify(recipe),
+      body: JSON.stringify(withoutListFields(recipe)),
     });
     if (data.recipe) {
-      await patchCache('/recipes', (d) => ({ ...d, recipes: [...(d.recipes || []), data.recipe] }));
+      await patchCache(RECIPES_LIST, (d) => ({ ...d, recipes: [...(d.recipes || []), toSummary(data.recipe)] }));
     } else {
-      dropCache('/recipes');
+      dropCache(RECIPES_LIST);
     }
     return data.recipe;
   },
 
-  async update(id: string, updates: Partial<Recipe>): Promise<Recipe> {
+  async update(id: string, changes: Partial<Recipe>): Promise<Recipe> {
+    const updates = withoutListFields(changes);
     const data = await fetchAPI(`/recipes/${id}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
-    const saved = data.recipe;
-    await patchCache('/recipes', (d) => ({
+    const saved: Recipe | undefined = data.recipe;
+    await patchCache(RECIPES_LIST, (d) => ({
       ...d,
-      recipes: (d.recipes || []).map((r: Recipe) => (r.id === id ? { ...r, ...updates, ...(saved || {}) } : r)),
+      recipes: (d.recipes || []).map((r: Recipe) => {
+        if (r.id !== id) return r;
+        if (saved) return toSummary(saved);
+        const merged = { ...r, ...updates };
+        return 'image' in updates ? toSummary(merged) : merged;
+      }),
     }));
     if (saved) writeCache(`/recipes/${id}`, { recipe: saved });
     else dropCache(`/recipes/${id}`);
-    return saved;
+    return saved as Recipe;
   },
 
   async delete(id: string): Promise<void> {
     await fetchAPI(`/recipes/${id}`, {
       method: 'DELETE',
     });
-    await patchCache('/recipes', (d) => ({ ...d, recipes: (d.recipes || []).filter((r: Recipe) => r.id !== id) }));
+    await patchCache(RECIPES_LIST, (d) => ({ ...d, recipes: (d.recipes || []).filter((r: Recipe) => r.id !== id) }));
     dropCache(`/recipes/${id}`);
   },
 };

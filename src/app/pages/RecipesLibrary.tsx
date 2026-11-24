@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
-import { recipeAPI, onFreshData } from "../services/api";
+import { recipeAPI, onFreshData, RECIPES_LIST } from "../services/api";
 import { normalizeRecipe } from "../utils/recipeOptions";
 import { Recipe } from "../types";
 import { RecipeCard } from "../components/RecipeCard";
@@ -136,7 +136,7 @@ export function RecipesLibrary() {
 
   // The list opens from the saved copy; when a newer copy arrives in the background, show it.
   useEffect(
-    () => onFreshData("/recipes", (data) => setRecipes((data?.recipes || []).map(normalizeRecipe))),
+    () => onFreshData(RECIPES_LIST, (data) => setRecipes((data?.recipes || []).map(normalizeRecipe))),
     []
   );
 

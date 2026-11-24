@@ -26,6 +26,8 @@ import {
   Award,
   Repeat2,
 } from "lucide-react";
+import { RecipeImage } from "../components/RecipeImage";
+import { hasPhoto } from "../services/recipeImages";
 
 export function Dashboard() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -368,8 +370,8 @@ export function Dashboard() {
                     className="flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:border-primary/30 hover:bg-muted/30 transition-all"
                   >
                     <span className="text-sm font-bold text-primary w-5 shrink-0 text-center">{index + 1}</span>
-                    {recipe.image && (
-                      <img src={recipe.image} alt={recipe.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                    {hasPhoto(recipe) && (
+                      <RecipeImage recipe={recipe} alt={recipe.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-medium text-foreground truncate">{recipe.name}</h4>
@@ -400,8 +402,8 @@ function RecipeRow({ recipe, index }: { recipe: Recipe; index: number }) {
       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
         <span className="text-sm font-bold text-primary">{index + 1}</span>
       </div>
-      {recipe.image && (
-        <img src={recipe.image} alt={recipe.name} className="w-12 h-12 rounded-lg object-cover" />
+      {hasPhoto(recipe) && (
+        <RecipeImage recipe={recipe} alt={recipe.name} className="w-12 h-12 rounded-lg object-cover" />
       )}
       <div className="flex-1 min-w-0">
         <h4 className="text-sm font-medium text-foreground truncate">{recipe.name}</h4>

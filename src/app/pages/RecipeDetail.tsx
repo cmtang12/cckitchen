@@ -36,6 +36,8 @@ import {
 import { toast } from "sonner";
 
 import { COOKING_METHODS, TAGS, TAG_LABELS, CATEGORIES, CATEGORY_LABELS, MEAL_COMPONENTS, MEAL_COMPONENT_LABELS, CUISINES, CUISINE_LABELS, tagLabel, methodLabel, allTags } from "../utils/recipeOptions";
+import { RecipeImage } from "../components/RecipeImage";
+import { hasPhoto } from "../services/recipeImages";
 
 // Shared with every other screen so labels and options always match.
 const cookingMethods = COOKING_METHODS;
@@ -1068,9 +1070,9 @@ export function RecipeDetail() {
                 to={`/recipes/${pairing.id}`}
                 className="flex items-center gap-3 p-3 rounded-lg bg-background/60 border border-border/40 hover:border-primary/30 hover:bg-background/80 transition-all group"
               >
-                {pairing.image && (
-                  <img
-                    src={pairing.image}
+                {hasPhoto(pairing) && (
+                  <RecipeImage
+                    recipe={pairing}
                     alt={pairing.name}
                     className="w-16 h-16 rounded object-cover"
                   />

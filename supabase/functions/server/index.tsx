@@ -184,11 +184,30 @@ app.get("/make-server-9a4224b7/health", (c) => {
 
 // ===== RECIPE ROUTES =====
 
-// Get all recipes
+// A short fingerprint of a photo, so the app knows when its saved copy is out of date.
+function imageVersionOf(image?: string): string | undefined {
+  if (!image) return undefined;
+  let h = 0;
+  const tail = image.slice(-256);
+  for (let i = 0; i < tail.length; i++) h = (h * 31 + tail.charCodeAt(i)) | 0;
+  return `${image.length}-${(h >>> 0).toString(36)}`;
+}
+
+// Get all recipes.
+// ?view=summary leaves the photos out (they're most of the size) and adds
+// hasImage + imageVersion; the app then loads each photo as it scrolls into view.
 app.get("/make-server-9a4224b7/recipes", async (c) => {
   try {
     const recipes = await kv.getByPrefix<Recipe>("recipe:");
     console.log(`[GET RECIPES] Fetched ${recipes?.length || 0} recipes from database`);
+
+    if (c.req.query("view") === "summary") {
+      const summaries = (recipes || []).map((r: Recipe) => {
+        const { image, ...rest } = r;
+        return { ...rest, hasImage: !!image, imageVersion: imageVersionOf(image) };
+      });
+      return c.json({ recipes: summaries, view: "summary" });
+    }
 
     // Log payload size for monitoring
     const payloadSize = JSON.stringify(recipes || []).length;
@@ -199,6 +218,19 @@ app.get("/make-server-9a4224b7/recipes", async (c) => {
   } catch (error) {
     console.error("[GET RECIPES] Error fetching recipes:", error);
     return c.json({ error: "Failed to fetch recipes", details: String(error) }, 500);
+  }
+});
+
+// Get just one recipe's photo
+app.get("/make-server-9a4224b7/recipes/:id/image", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const recipe = await kv.get<Recipe>(`recipe:${id}`);
+    if (!recipe) return c.json({ error: "Recipe not found" }, 404);
+    return c.json({ image: recipe.image || null, imageVersion: imageVersionOf(recipe.image) });
+  } catch (error) {
+    console.log("Error fetching recipe image:", error);
+    return c.json({ error: "Failed to fetch image", details: String(error) }, 500);
   }
 });
 

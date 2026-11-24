@@ -6,6 +6,8 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { Search, Plus, X, Check } from "lucide-react";
+import { RecipeImage } from "./RecipeImage";
+import { hasPhoto } from "../services/recipeImages";
 
 interface RecipePairingsManagerProps {
   currentRecipe: Recipe;
@@ -94,9 +96,9 @@ export function RecipePairingsManager({
               key={recipe.id}
               className="flex items-center gap-3 p-2 rounded-lg bg-primary/5 border border-primary/20"
             >
-              {recipe.image && (
-                <img
-                  src={recipe.image}
+              {hasPhoto(recipe) && (
+                <RecipeImage
+                  recipe={recipe}
                   alt={recipe.name}
                   className="w-10 h-10 rounded object-cover"
                 />
@@ -186,9 +188,9 @@ export function RecipePairingsManager({
                           : "border-border/50 hover:border-border hover:bg-accent"
                       }`}
                     >
-                      {recipe.image && (
-                        <img
-                          src={recipe.image}
+                      {hasPhoto(recipe) && (
+                        <RecipeImage
+                          recipe={recipe}
                           alt={recipe.name}
                           className="w-12 h-12 rounded object-cover"
                         />

@@ -18,6 +18,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { RecipeImage } from "../components/RecipeImage";
+import { hasPhoto } from "../services/recipeImages";
 
 interface CategorizedIngredient {
   key: string; // stable identity used for merging/checking/removing/editing, independent of display text
@@ -788,9 +790,9 @@ export function GroceryList() {
                   <div className="space-y-0 divide-y divide-border/50">
                     {menuRecipes.meals.map(({ recipe, mealType }) => (
                       <div key={recipe.id} className="py-5 flex gap-4">
-                        {recipe.image && (
-                          <img
-                            src={recipe.image}
+                        {hasPhoto(recipe) && (
+                          <RecipeImage
+                            recipe={recipe}
                             alt={recipe.name}
                             className="w-20 h-20 rounded-lg object-cover shrink-0"
                           />
@@ -843,9 +845,9 @@ export function GroceryList() {
                   <div className="space-y-0 divide-y divide-border/50">
                     {menuRecipes.snacks.map(({ recipe }) => (
                       <div key={recipe.id} className="py-5 flex gap-4">
-                        {recipe.image && (
-                          <img
-                            src={recipe.image}
+                        {hasPhoto(recipe) && (
+                          <RecipeImage
+                            recipe={recipe}
                             alt={recipe.name}
                             className="w-20 h-20 rounded-lg object-cover shrink-0"
                           />
