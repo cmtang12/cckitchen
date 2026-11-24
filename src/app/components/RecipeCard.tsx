@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { Recipe } from "../types";
-import { Heart, Star, Check } from "lucide-react";
+import { useRef } from "react";
+import { Heart, Star, Check, MoreHorizontal } from "lucide-react";
 import { formatCookingTime } from "../utils/formatTime";
 import { methodLabel, allTags, tagLabel } from "../utils/recipeOptions";
 import { CatMark } from "./CatMark";
@@ -10,13 +11,65 @@ interface RecipeCardProps {
   selectionMode?: boolean;
   isSelected?: boolean;
   onSelectionChange?: (recipeId: string, selected: boolean) => void;
+  /** Press and hold (or right-click) opens quick actions for this recipe. */
+  onLongPress?: (recipe: Recipe) => void;
 }
+
+const HOLD_MS = 450;
+const MOVE_TOLERANCE = 10;
 
 /**
  * A recipe in a grid: the photo, the name, and one quiet line of details.
  * Used everywhere a list of recipes appears so they all look and act the same.
  */
-export function RecipeCard({ recipe, selectionMode = false, isSelected = false, onSelectionChange }: RecipeCardProps) {
+export function RecipeCard({ recipe, selectionMode = false, isSelected = false, onSelectionChange, onLongPress }: RecipeCardProps) {
+  // Press and hold: open quick actions instead of the recipe.
+  const timer = useRef<number | null>(null);
+  const start = useRef<{ x: number; y: number } | null>(null);
+  const fired = useRef(false);
+
+  const cancelHold = () => {
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = null;
+    start.current = null;
+  };
+
+  const openActions = () => {
+    fired.current = true;
+    cancelHold();
+    try { navigator.vibrate?.(10); } catch {}
+    onLongPress?.(recipe);
+  };
+
+  const holdHandlers = onLongPress && !selectionMode ? {
+    onPointerDown: (e: React.PointerEvent) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      fired.current = false;
+      start.current = { x: e.clientX, y: e.clientY };
+      timer.current = window.setTimeout(openActions, HOLD_MS);
+    },
+    onPointerMove: (e: React.PointerEvent) => {
+      if (!start.current) return;
+      if (Math.abs(e.clientX - start.current.x) > MOVE_TOLERANCE || Math.abs(e.clientY - start.current.y) > MOVE_TOLERANCE) cancelHold();
+    },
+    onPointerUp: cancelHold,
+    onPointerCancel: cancelHold,
+    onPointerLeave: cancelHold,
+    // Right-click on a computer; also Android's own long-press signal.
+    onContextMenu: (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (!fired.current) openActions();
+    },
+    // Don't also open the recipe when the finger lifts after a hold.
+    onClickCapture: (e: React.MouseEvent) => {
+      if (fired.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        fired.current = false;
+      }
+    },
+  } : {};
+
   const details = [
     recipe.cookingTime ? formatCookingTime(recipe.cookingTime) : "",
     recipe.cookingMethod.slice(0, 2).map(methodLabel).join(", "),
@@ -37,6 +90,7 @@ export function RecipeCard({ recipe, selectionMode = false, isSelected = false, 
             alt=""
             loading="lazy"
             decoding="async"
+            draggable={false}
             className="w-full h-full object-cover transition-opacity group-hover:opacity-90"
           />
         ) : (
@@ -54,6 +108,21 @@ export function RecipeCard({ recipe, selectionMode = false, isSelected = false, 
           >
             {isSelected && <Check className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={3} />}
           </span>
+        )}
+
+        {onLongPress && !selectionMode && (
+          <button
+            type="button"
+            aria-label="More actions"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onLongPress(recipe);
+            }}
+            className="hidden md:flex absolute top-2.5 left-2.5 w-7 h-7 rounded-full bg-white/85 items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+          >
+            <MoreHorizontal className="w-4 h-4 text-foreground" />
+          </button>
         )}
 
         {recipe.isLoved && !selectionMode && (
@@ -96,5 +165,14 @@ export function RecipeCard({ recipe, selectionMode = false, isSelected = false, 
     );
   }
 
-  return <Link to={`/recipes/${recipe.id}`}>{content}</Link>;
+  return (
+    <Link
+      to={`/recipes/${recipe.id}`}
+      draggable={false}
+      className="block select-none [-webkit-touch-callout:none]"
+      {...holdHandlers}
+    >
+      {content}
+    </Link>
+  );
 }

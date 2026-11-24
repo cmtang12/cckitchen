@@ -6,6 +6,7 @@ import { Recipe } from "../types";
 import { RecipeCard } from "../components/RecipeCard";
 import { OnboardingBanner } from "../components/OnboardingBanner";
 import { BulkSaveToMealPlanDialog } from "../components/BulkSaveToMealPlanDialog";
+import { RecipeQuickActions } from "../components/RecipeQuickActions";
 import { Input } from "../components/ui/input";
 import { Search, SlidersHorizontal, X, ChevronDown, Star, Trash2, CalendarPlus } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -187,11 +188,8 @@ export function RecipesLibrary() {
     return true;
   };
 
-  const { filteredRecipes, hiddenLowRated } = useMemo(() => {
-    const base = recipes.filter(matchesEverythingButRating);
-    const shown = base.filter((r) => matchesRating(r, ratingFilter));
-    const hidden = ratingFilter === "hide-low" ? base.length - shown.length : 0;
-    return { filteredRecipes: shown, hiddenLowRated: hidden };
+  const filteredRecipes = useMemo(() => {
+    return recipes.filter((r) => matchesEverythingButRating(r) && matchesRating(r, ratingFilter));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     recipes, searchQuery, selectedTags, selectedMethods, selectedCuisines, selectedCategories,
@@ -206,12 +204,13 @@ export function RecipesLibrary() {
     setSelectedComponents([]);
     setSearchQuery("");
     setMaxCookingTime([MAX_TIME]);
-    setRatingFilter("hide-low");
+    setRatingFilter("all");
     setShowOnlyCooked(false);
     setShowOnlyLoved(false);
   };
 
-  // The default rating filter isn't counted as "a filter you turned on".
+  // The rating filter is on by default (hiding 3★ and under), so the Filters
+  // button shows "1" until it's changed to "Show all".
   const activeFilterCount =
     selectedTags.length +
     selectedMethods.length +
@@ -219,7 +218,7 @@ export function RecipesLibrary() {
     selectedCategories.length +
     selectedComponents.length +
     (maxCookingTime[0] < MAX_TIME ? 1 : 0) +
-    (ratingFilter !== "hide-low" ? 1 : 0) +
+    (ratingFilter !== "all" ? 1 : 0) +
     (showOnlyCooked ? 1 : 0) +
     (showOnlyLoved ? 1 : 0);
   const hasFilters = activeFilterCount > 0 || searchQuery.length > 0;
@@ -255,6 +254,42 @@ export function RecipesLibrary() {
   };
 
   const selectedRecipes = recipes.filter((r) => selectedRecipeIds.has(r.id));
+
+  // Press-and-hold quick actions
+  const [actionRecipe, setActionRecipe] = useState<Recipe | null>(null);
+  const [planRecipe, setPlanRecipe] = useState<Recipe | null>(null);
+
+  const saveChange = async (recipe: Recipe, changes: Partial<Recipe>, message: string) => {
+    const before: Partial<Recipe> = {};
+    (Object.keys(changes) as Array<keyof Recipe>).forEach((k) => { (before as any)[k] = recipe[k]; });
+    const apply = (c: Partial<Recipe>) =>
+      setRecipes((prev) => prev.map((r) => (r.id === recipe.id ? { ...r, ...c } : r)));
+    apply(changes);
+    try {
+      await recipeAPI.update(recipe.id, changes);
+      toast.success(message, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            apply(before);
+            try { await recipeAPI.update(recipe.id, before); } catch { toast.error("Couldn't undo"); }
+          },
+        },
+      });
+    } catch {
+      apply(before);
+      toast.error("Couldn't save that change");
+    }
+  };
+
+  const toggleFavorite = (recipe: Recipe) =>
+    saveChange(recipe, { isLoved: !recipe.isLoved }, recipe.isLoved ? "Removed from Favorites" : "Added to Favorites");
+
+  const toggleWantToTry = (recipe: Recipe) => {
+    const has = recipe.tags.includes("want-to-try");
+    const tags = has ? recipe.tags.filter((t) => t !== "want-to-try") : [...recipe.tags, "want-to-try" as const];
+    saveChange(recipe, { tags }, has ? "Removed from Want to Try" : "Added to Want to Try");
+  };
 
   if (isLoading) {
     return (
@@ -332,24 +367,6 @@ export function RecipesLibrary() {
             {tagLabel("lily-safe")}
           </FilterChip>
           <FilterChip
-            selected={ratingFilter === "4plus"}
-            onClick={() => setRatingFilter(ratingFilter === "4plus" ? "hide-low" : "4plus")}
-          >
-            4<Star className="w-3 h-3 fill-current" /> &amp; up
-          </FilterChip>
-          <FilterChip
-            selected={selectedTags.includes("quick-easy")}
-            onClick={() => setSelectedTags(toggleIn(selectedTags, "quick-easy"))}
-          >
-            {tagLabel("quick-easy")}
-          </FilterChip>
-          <FilterChip
-            selected={selectedTags.includes("tried-true")}
-            onClick={() => setSelectedTags(toggleIn(selectedTags, "tried-true"))}
-          >
-            {tagLabel("tried-true")}
-          </FilterChip>
-          <FilterChip
             selected={selectedTags.includes("want-to-try")}
             onClick={() => setSelectedTags(toggleIn(selectedTags, "want-to-try"))}
           >
@@ -361,7 +378,7 @@ export function RecipesLibrary() {
       {/* All filters */}
       {showFilters && (
         <div className="mb-6 bg-card border border-border rounded-2xl p-5">
-          <FilterSection title="Rating" count={ratingFilter !== "hide-low" ? 1 : 0} defaultOpen>
+          <FilterSection title="Rating" count={ratingFilter !== "all" ? 1 : 0} defaultOpen>
             {RATING_OPTIONS.map((o) => (
               <FilterChip key={o.value} selected={ratingFilter === o.value} onClick={() => setRatingFilter(o.value)}>
                 {o.label}
@@ -447,23 +464,6 @@ export function RecipesLibrary() {
       {recipes.length > 0 && (
         <p className="text-sm text-muted-foreground mb-4">
           {filteredRecipes.length} {filteredRecipes.length === 1 ? "recipe" : "recipes"}
-          {hiddenLowRated > 0 && (
-            <>
-              {" · "}
-              {hiddenLowRated} rated 3★ or less hidden{" "}
-              <button onClick={() => setRatingFilter("all")} className="underline underline-offset-4 hover:text-foreground">
-                Show
-              </button>
-            </>
-          )}
-          {hasFilters && (
-            <>
-              {" · "}
-              <button onClick={clearFilters} className="underline underline-offset-4 hover:text-foreground">
-                Clear filters
-              </button>
-            </>
-          )}
         </p>
       )}
 
@@ -477,6 +477,7 @@ export function RecipesLibrary() {
               selectionMode={selectionMode}
               isSelected={selectedRecipeIds.has(recipe.id)}
               onSelectionChange={handleSelectionChange}
+              onLongPress={setActionRecipe}
             />
           ))}
         </div>
@@ -498,9 +499,9 @@ export function RecipesLibrary() {
 
       {/* Actions for selected recipes (phone and computer) */}
       {selectionMode && (
-        <div className="fixed left-0 right-0 bottom-20 md:bottom-6 z-40 px-4 md:pl-24 pointer-events-none">
+        <div className="fixed left-0 right-0 bottom-[calc(env(safe-area-inset-bottom)+104px)] md:bottom-6 z-[60] px-4 md:pl-24 pointer-events-none">
           <div className="max-w-xl mx-auto pointer-events-auto bg-card border border-border rounded-2xl shadow-[0_8px_30px_rgba(80,50,30,0.12)] p-3 flex items-center gap-2">
-            <span className="text-sm text-foreground px-2 mr-auto">
+            <span className="text-sm text-foreground px-2 mr-auto whitespace-nowrap">
               {selectedRecipeIds.size} selected
             </span>
             <Button
@@ -510,7 +511,7 @@ export function RecipesLibrary() {
               className="rounded-full h-9"
             >
               <CalendarPlus className="w-4 h-4 mr-1.5" />
-              Add to meal plan
+              Add to plan
             </Button>
             <Button
               size="icon"
@@ -528,6 +529,20 @@ export function RecipesLibrary() {
           </div>
         </div>
       )}
+
+      <RecipeQuickActions
+        recipe={actionRecipe}
+        onClose={() => setActionRecipe(null)}
+        onToggleFavorite={toggleFavorite}
+        onToggleWantToTry={toggleWantToTry}
+        onAddToMealPlan={setPlanRecipe}
+      />
+
+      <BulkSaveToMealPlanDialog
+        open={!!planRecipe}
+        onOpenChange={(open) => !open && setPlanRecipe(null)}
+        recipes={planRecipe ? [planRecipe] : []}
+      />
 
       <BulkSaveToMealPlanDialog
         open={showBulkMealPlanDialog}

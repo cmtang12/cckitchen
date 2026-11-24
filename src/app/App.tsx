@@ -7,7 +7,8 @@ function App() {
   return (
     <>
       <RouterProvider router={router} />
-      <Toaster />
+      {/* Messages appear at the top so they never cover the bottom tabs or action bars */}
+      <Toaster position="top-center" mobileOffset={{ top: "calc(env(safe-area-inset-top) + 56px)" }} />
     </>
   );
 }
