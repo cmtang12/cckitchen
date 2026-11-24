@@ -53,7 +53,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
           <div className="flex items-center gap-3 overflow-hidden">
             <CatMark className="w-8 h-8 flex-shrink-0 text-[#9c5434]" counter={false} />
             <span 
-              className={`font-semibold text-foreground whitespace-nowrap transition-opacity duration-300 ${
+              className={`wordmark text-xl whitespace-nowrap transition-opacity duration-300 ${
                 isExpanded ? "opacity-100" : "opacity-0"
               }`}
             >

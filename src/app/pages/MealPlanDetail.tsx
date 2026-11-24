@@ -241,54 +241,28 @@ export function MealPlanDetail() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12 sm:pt-8">
-      {/* Header */}
-      <div className="mb-8">
+      {/* Top row: same pattern as a recipe page (Back left, actions right) */}
+      <div className="flex items-center justify-between mb-3 sm:mb-6">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/meal-plans")} className="rounded-lg -ml-2">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
         <Button
           variant="ghost"
-          onClick={() => navigate("/meal-plans?tab=saved")}
-          className="mb-4 -ml-3"
+          size="icon"
+          onClick={() => navigate(`/edit-meal-plan/${id}`)}
+          className="rounded-lg hover:bg-primary/5"
+          title="Edit meal plan"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Meal Plans
+          <Pencil className="w-5 h-5 text-muted-foreground" />
         </Button>
+      </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-3xl font-bold text-foreground mb-2 break-words">
-              {mealPlan.name}
-            </h1>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4" />
-                <span>{new Date(mealPlan.dateCreated).toLocaleDateString()}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <UtensilsCrossed className="w-4 h-4" />
-                <span>{mealPlan.meals.length} recipes</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/edit-meal-plan/${id}`)}
-              className="rounded-lg"
-            >
-              <Pencil className="w-4 h-4 mr-2" />
-              Edit
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDeletePlan}
-              className="rounded-lg text-muted-foreground hover:text-red-600 hover:bg-red-50/50"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-foreground mb-1 break-words">{mealPlan.name}</h1>
+        <p className="text-sm text-muted-foreground">
+          {mealPlan.meals.length} {mealPlan.meals.length === 1 ? "recipe" : "recipes"} · {new Date(mealPlan.dateCreated).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+        </p>
       </div>
 
       {/* Overall Plan Notes */}

@@ -135,6 +135,15 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* The app's name, in a round, friendly hand */
+.wordmark {
+  font-family: "Sniglet", ui-rounded, "Nunito", system-ui, sans-serif;
+  font-weight: 400;
+  color: #9c5434;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

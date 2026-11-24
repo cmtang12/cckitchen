@@ -16,6 +16,7 @@ import {
   Check,
   UtensilsCrossed,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
@@ -289,6 +290,7 @@ export function EditMealPlan() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
+  const [nameDraft, setNameDraft] = useState("");
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -315,6 +317,7 @@ export function EditMealPlan() {
         recipeAPI.getAll(),
       ]);
       setMealPlan(planData);
+      setNameDraft(planData?.name || "");
       setRecipes(recipesData);
     } catch (error) {
       console.error("Failed to load meal plan:", error);
@@ -592,30 +595,73 @@ export function EditMealPlan() {
     );
   }
 
+  const saveName = async () => {
+    if (!mealPlan) return;
+    const name = nameDraft.trim();
+    if (!name) {
+      setNameDraft(mealPlan.name);
+      return;
+    }
+    if (name === mealPlan.name) return;
+    const previous = mealPlan.name;
+    setMealPlan({ ...mealPlan, name });
+    try {
+      await mealPlanAPI.update(mealPlan.id, { name });
+      toast.success("Renamed");
+    } catch (error) {
+      console.error("Failed to rename meal plan:", error);
+      setMealPlan({ ...mealPlan, name: previous });
+      setNameDraft(previous);
+      toast.error("Couldn't rename the meal plan");
+    }
+  };
+
+  const deletePlan = async () => {
+    if (!mealPlan) return;
+    if (!confirm(`Delete "${mealPlan.name}"? This can't be undone.`)) return;
+    try {
+      await mealPlanAPI.delete(mealPlan.id);
+      toast.success("Meal plan deleted");
+      navigate("/meal-plans");
+    } catch (error) {
+      console.error("Failed to delete meal plan:", error);
+      toast.error("Couldn't delete the meal plan");
+    }
+  };
+
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12 sm:pt-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(`/meal-plans/${id}`)}
-            className="mb-4 -ml-3"
-          >
+        {/* Top row: same pattern as a recipe page */}
+        <div className="flex items-center justify-between mb-3 sm:mb-6">
+          <Button variant="ghost" size="sm" onClick={() => navigate(`/meal-plans/${id}`)} className="rounded-lg -ml-2">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to View
+            Done
           </Button>
+        </div>
 
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-foreground mb-2">
-                Edit: {mealPlan.name}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Drag and drop meals between the gaps to reorder. Drop onto a meal card to group into a complete meal.
-              </p>
-            </div>
-          </div>
+        {/* Name: tap to rename, saves when you leave the field or press Enter */}
+        <div className="mb-6">
+          <label htmlFor="plan-name" className="block text-xs font-medium text-muted-foreground mb-1">
+            Name
+          </label>
+          <input
+            id="plan-name"
+            value={nameDraft}
+            onChange={(e) => setNameDraft(e.target.value)}
+            onBlur={saveName}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              if (e.key === "Escape") {
+                setNameDraft(mealPlan.name);
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+            className="w-full text-2xl font-semibold text-foreground bg-transparent border-0 border-b border-dashed border-border focus:border-primary focus:outline-none py-1"
+          />
+          <p className="text-sm text-muted-foreground mt-3">
+            Drag a meal into a gap to reorder it, or onto another meal to group them.
+          </p>
         </div>
 
         {/* Main Content */}
@@ -623,10 +669,10 @@ export function EditMealPlan() {
           {/* Left Column - Current Recipes */}
           <div className="lg:col-span-2 space-y-6">
             <Card className="border-border/50">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
+              <CardContent className="p-3 sm:p-6">
+                <div className="flex items-center justify-between mb-4 px-1 sm:px-0">
                   <h2 className="text-lg font-semibold text-foreground">
-                    Recipes in Plan ({mealPlan.meals.length})
+                    Recipes in plan ({mealPlan.meals.length})
                   </h2>
                 </div>
 
@@ -636,7 +682,7 @@ export function EditMealPlan() {
                       Forcing a definite width here makes it respect the container. */}
                   <div style={{ width: 1, minWidth: "100%" }}>
                   {mealPlan.meals.length > 0 ? (
-                    <div className="pr-4">
+                    <div className="pr-2 sm:pr-4">
                       {mealPlan.meals.map((meal, index) => {
                         const recipe = getRecipeById(meal.recipeId);
                         if (!recipe) return null;
@@ -903,6 +949,17 @@ export function EditMealPlan() {
             </div>
           </DialogContent>
         </Dialog>
+        {/* Delete lives here, away from everyday buttons (same as editing a recipe) */}
+        <div className="mt-10 pt-6 border-t border-border/60">
+          <Button
+            onClick={deletePlan}
+            variant="ghost"
+            className="text-muted-foreground hover:text-red-600 hover:bg-red-50/50 rounded-xl"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete meal plan
+          </Button>
+        </div>
       </div>
     </DndProvider>
   );

@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import { FolderHeart, Loader2, Pencil, Trash2, Plus, Search, X, Check, UtensilsCrossed, RefreshCw, ArrowUpDown } from "lucide-react";
+import { FolderHeart, Loader2, Pencil, Trash2, MoreHorizontal, Plus, Search, X, Check, UtensilsCrossed, RefreshCw, ArrowUpDown } from "lucide-react";
 import { MealPlan, Recipe, PlannedMeal } from "../types";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router";
@@ -23,6 +23,7 @@ import { formatCookingTime } from "../utils/formatTime";
 import { tagLabel, methodLabel } from "../utils/recipeOptions";
 import { RecipeImage } from "../components/RecipeImage";
 import { hasPhoto } from "../services/recipeImages";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../components/ui/dropdown-menu";
 
 const RECIPE_CARD_TYPE = "RECIPE_CARD";
 
@@ -596,18 +597,42 @@ export function SavedPlans() {
                 key={plan.id}
                 className="border-border/50 overflow-hidden hover:border-primary/30 transition-all group"
               >
-                <CardContent className="p-6">
+                <CardContent className="p-6 relative">
+                  {/* Edit / delete live in a small menu, so the card itself just opens the plan */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label="More actions"
+                        className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                      >
+                        <MoreHorizontal className="w-5 h-5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-40">
+                      <DropdownMenuItem onSelect={() => navigate(`/edit-meal-plan/${plan.id}`)}>
+                        <Pencil className="w-4 h-4 mr-2" /> Edit or rename
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => handleDeletePlan(plan.id)}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
                   {/* Plan Header */}
                   <Link to={`/meal-plans/${plan.id}`}>
-                  <div className="mb-4 cursor-pointer">
+                  <div className="mb-4 cursor-pointer pr-8">
                     <h3 className="text-lg font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
                       {plan.name}
                     </h3>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span>{recipeCount} {recipeCount === 1 ? "recipe" : "recipes"}</span>
-                      <span>•</span>
+                      <span>·</span>
                       <span>
-                        {new Date(plan.dateCreated).toLocaleDateString()}
+                        {new Date(plan.dateCreated).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                       </span>
                     </div>
                   </div>
@@ -651,26 +676,6 @@ export function SavedPlans() {
                     </div>
                   )}
 
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/edit-meal-plan/${plan.id}`)}
-                      className="flex-1 rounded-lg border-border/50"
-                    >
-                      <Pencil className="w-4 h-4 mr-2" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeletePlan(plan.id)}
-                      className="rounded-lg text-muted-foreground hover:text-red-600 hover:bg-red-50/50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
                 </CardContent>
               </Card>
             );

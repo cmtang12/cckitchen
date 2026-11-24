@@ -32,7 +32,7 @@ export function RootLayout() {
           <div className="flex items-center justify-between h-12 px-4">
           <Link to="/" className="flex items-center gap-2">
             <CatMark className="w-7 h-7 text-[#9c5434]" counter={false} />
-            <span className="text-sm font-semibold text-foreground">C&amp;C's Kitchen</span>
+            <span className="wordmark text-[22px]">C&amp;C's Kitchen</span>
           </Link>
           <button
             onClick={handleLogout}
