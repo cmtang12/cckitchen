@@ -28,6 +28,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "../components/ui/dialog";
+import { tagLabel, methodLabel } from "../utils/recipeOptions";
 
 const RECIPE_CARD_TYPE = "RECIPE_CARD";
 
@@ -876,7 +877,7 @@ export function EditMealPlan() {
                                     variant="outline"
                                     className="text-xs border-border/50"
                                   >
-                                    {tag}
+                                    {tagLabel(tag)}
                                   </Badge>
                                 ))}
                               </div>

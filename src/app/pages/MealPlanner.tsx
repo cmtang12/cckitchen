@@ -41,6 +41,7 @@ import {
 import { CookingMethod, RecipeTag, AIInsights, PlannedMeal } from "../types";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
+import { tagLabel, methodLabel } from "../utils/recipeOptions";
 
 const availableMethods: CookingMethod[] = [
   "stovetop",
@@ -54,17 +55,6 @@ const availableMethods: CookingMethod[] = [
   "no cook",
 ];
 
-const cookingMethodIcons: Record<CookingMethod, string> = {
-  "stovetop": "🍳",
-  "oven": "🔥",
-  "air fryer": "💨",
-  "slow cooker": "🥘",
-  "instant pot": "⚡",
-  "grill": "🔥",
-  "microwave": "📡",
-  "rice cooker": "🍚",
-  "no cook": "✨",
-};
 
 function selectOptimalRecipes(recipes: Recipe[], count: number): Recipe[] {
   // Simple random selection
@@ -445,18 +435,14 @@ export function MealPlanner({ onClose }: MealPlannerProps) {
                           <Users className="w-4 h-4" />
                           <span>{recipe.servings} servings</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          {recipe.cookingMethod.slice(0, 2).map((method) => (
-                            <span key={method} className="text-base">
-                              {cookingMethodIcons[method]}
-                            </span>
-                          ))}
-                        </div>
+                        {recipe.cookingMethod.length > 0 && (
+                          <span>{recipe.cookingMethod.slice(0, 2).map(methodLabel).join(", ")}</span>
+                        )}
                       </div>
                       <div className="flex flex-wrap gap-2 mb-4">
                         {recipe.tags.slice(0, 4).map((tag) => (
                           <Badge key={tag} variant="secondary" className="text-xs bg-muted/50 text-muted-foreground border-0">
-                            {tag}
+                            {tagLabel(tag)}
                           </Badge>
                         ))}
                       </div>
@@ -654,7 +640,7 @@ export function MealPlanner({ onClose }: MealPlannerProps) {
                     <div className="flex flex-wrap gap-1.5">
                       {recipe.tags.slice(0, 3).map((tag) => (
                         <Badge key={tag} variant="secondary" className="text-xs bg-muted/50 text-muted-foreground border-0">
-                          {tag}
+                          {tagLabel(tag)}
                         </Badge>
                       ))}
                     </div>

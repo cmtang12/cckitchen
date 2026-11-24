@@ -35,11 +35,11 @@ export function MobileBottomNav() {
   // Separate import from other nav items
   const leftNavItems = [
     { path: "/", icon: BookOpen, label: "Recipes" },
-    { path: "/grocery-list", icon: ShoppingBasket, label: "Grocery" },
+    { path: "/grocery-list", icon: ShoppingBasket, label: "Groceries" },
   ];
   
   const rightNavItems = [
-    { path: "/meal-plans", icon: Calendar, label: "Plans" },
+    { path: "/meal-plans", icon: Calendar, label: "Meal plans" },
     { path: "/dashboard", icon: BarChart3, label: "Stats" },
   ];
 
@@ -76,7 +76,7 @@ export function MobileBottomNav() {
         {/* Center Add Button */}
         <div className="absolute left-1/2 -translate-x-1/2 -top-6">
           <Link to="/import">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#E07B67] to-[#D16A56] shadow-lg shadow-[#E07B67]/20 flex items-center justify-center hover:scale-105 transition-transform">
+            <div className="w-14 h-14 rounded-full bg-primary shadow-[0_6px_16px_rgba(120,60,30,0.25)] flex items-center justify-center" title="Add a recipe">
               <Plus className="w-5 h-5 text-white stroke-[2.5]" />
             </div>
           </Link>

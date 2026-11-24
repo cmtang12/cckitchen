@@ -7,6 +7,7 @@ import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { Loader2, Check, X, Save } from "lucide-react";
 import { formatCookingTime } from "../utils/formatTime";
+import { tagLabel, methodLabel } from "../utils/recipeOptions";
 
 // Helper function to format cooking time - moved to utils
 

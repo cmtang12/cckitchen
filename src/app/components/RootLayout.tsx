@@ -1,6 +1,7 @@
 import React from "react";
 import { Outlet, Link, useNavigate } from "react-router";
 import { Sidebar } from "./Sidebar";
+import { CatMark } from "./CatMark";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { Plus, LogOut } from "lucide-react";
 import { logout } from "../utils/auth";
@@ -25,11 +26,14 @@ export function RootLayout() {
       <div className="flex-1 min-w-0 md:ml-16 pb-20 md:pb-0">
         {/* Mobile top bar - in normal document flow so it never overlaps page content */}
         <div className="md:hidden flex items-center justify-between h-12 px-4 border-b border-border bg-background">
-          <span className="text-sm font-semibold text-foreground">C&C's Kitchen</span>
+          <Link to="/" className="flex items-center gap-2">
+            <CatMark className="w-7 h-7 text-[#9c5434]" counter={false} />
+            <span className="text-sm font-semibold text-foreground">C&amp;C's Kitchen</span>
+          </Link>
           <button
             onClick={handleLogout}
             className="p-2 -mr-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            title="Logout"
+            title="Log out"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -48,7 +52,7 @@ export function RootLayout() {
       {/* Floating Action Button - Desktop only */}
       <div className="hidden md:block">
         <Link to="/import">
-          <div className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-gradient-to-br from-[#E07B67] to-[#D16A56] shadow-lg shadow-[#E07B67]/20 flex items-center justify-center hover:scale-105 transition-transform cursor-pointer z-50">
+          <div className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-primary shadow-[0_6px_16px_rgba(120,60,30,0.25)] flex items-center justify-center cursor-pointer z-30" title="Add a recipe">
             <Plus className="w-5 h-5 text-white stroke-[2.5]" />
           </div>
         </Link>

@@ -1,6 +1,6 @@
 export type CookingMethod = 'stovetop' | 'oven' | 'air fryer' | 'slow cooker' | 'instant pot' | 'grill' | 'microwave' | 'rice cooker' | 'no cook';
 
-export type RecipeCategory = 'side' | 'appetizer' | 'main course' | 'dessert' | 'snack';
+export type RecipeCategory = 'breakfast' | 'appetizer' | 'main-course' | 'side' | 'dessert' | 'snack';
 
 export type RecipeTag = 
   | 'lily-safe'
@@ -11,7 +11,7 @@ export type RecipeTag =
 
 export type MealComponent = 'protein' | 'veggie' | 'carb' | 'complete-meal';
 
-export type CuisineType = 'asian' | 'american' | 'mexican' | 'italian' | 'mediterranean' | 'indian' | 'middle-eastern' | 'french' | 'spanish' | 'thai' | 'japanese' | 'korean' | 'chinese' | 'vietnamese' | 'greek';
+export type CuisineType = 'hispanic' | 'asian' | 'american' | 'mexican' | 'italian' | 'mediterranean' | 'indian' | 'middle-eastern' | 'french' | 'spanish' | 'thai' | 'japanese' | 'korean' | 'chinese' | 'vietnamese' | 'greek';
 
 export interface Recipe {
   id: string;

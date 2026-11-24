@@ -8,6 +8,7 @@ import { Label } from "./ui/label";
 import { ScrollArea } from "./ui/scroll-area";
 import { Plus, Check, FolderPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { SaveToMealPlanDialog } from "./SaveToMealPlanDialog";
 
 interface BulkSaveToMealPlanDialogProps {
   open: boolean;
@@ -15,7 +16,16 @@ interface BulkSaveToMealPlanDialogProps {
   recipes: Recipe[];
 }
 
-export function BulkSaveToMealPlanDialog({
+export function BulkSaveToMealPlanDialog(props: BulkSaveToMealPlanDialogProps) {
+  // Adding one recipe works exactly like "Add to meal plan" on the recipe's own page,
+  // including the suggested sides.
+  if (props.recipes.length === 1) {
+    return <SaveToMealPlanDialog open={props.open} onOpenChange={props.onOpenChange} recipe={props.recipes[0]} />;
+  }
+  return <MultiRecipeDialog {...props} />;
+}
+
+function MultiRecipeDialog({
   open,
   onOpenChange,
   recipes,

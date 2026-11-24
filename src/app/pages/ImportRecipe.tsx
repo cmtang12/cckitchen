@@ -30,59 +30,18 @@ import {
 } from "lucide-react";
 import Tesseract from "tesseract.js";
 
-const cookingMethods: CookingMethod[] = [
-  "stovetop",
-  "oven",
-  "air fryer",
-  "slow cooker",
-  "instant pot",
-  "grill",
-  "microwave",
-  "rice cooker",
-  "no cook",
-];
+import { COOKING_METHODS, TAGS, TAG_LABELS, CATEGORIES, CATEGORY_LABELS, MEAL_COMPONENTS, MEAL_COMPONENT_LABELS, CUISINES, CUISINE_LABELS, tagLabel, methodLabel, allTags } from "../utils/recipeOptions";
 
-const availableTags: RecipeTag[] = [
-  "lily-safe",
-  "tried-true",
-  "want-to-try",
-  "high-protein",
-  "quick-easy",
-];
-
-const tagLabels: Record<RecipeTag, string> = {
-  "lily-safe": "Lily Safe",
-  "tried-true": "Tried & True",
-  "want-to-try": "Want to Try",
-  "high-protein": "High Protein",
-  "quick-easy": "Quick & Easy",
-};
-
-const availableCategories: Array<RecipeCategory> = ["appetizer", "side", "main-course", "dessert", "breakfast", "snack"];
-const availableMealComponents: Array<MealComponent> = ["protein", "veggie", "carb", "complete-meal"];
-const availableCuisineTypes: Array<CuisineType> = ["american", "asian", "hispanic"];
-
-const categoryLabels: Record<string, string> = {
-  "side": "Side",
-  "appetizer": "Appetizer",
-  "main-course": "Main Course",
-  "dessert": "Dessert",
-  "snack": "Snack",
-  "breakfast": "Breakfast",
-};
-
-const mealComponentLabels: Record<MealComponent, string> = {
-  "protein": "Protein",
-  "veggie": "Veggie",
-  "carb": "Carb",
-  "complete-meal": "Complete Meal",
-};
-
-const cuisineTypeLabels: Record<CuisineType, string> = {
-  "asian": "Asian",
-  "american": "American",
-  "hispanic": "Hispanic",
-};
+// Shared with every other screen so labels and options always match.
+const cookingMethods = COOKING_METHODS;
+const availableTags = TAGS;
+const tagLabels = TAG_LABELS;
+const availableCategories = CATEGORIES;
+const categoryLabels = CATEGORY_LABELS;
+const availableMealComponents = MEAL_COMPONENTS;
+const mealComponentLabels = MEAL_COMPONENT_LABELS;
+const availableCuisineTypes = CUISINES;
+const cuisineTypeLabels = CUISINE_LABELS;
 
 interface RecipePhotoScannerProps {
   inputId: string;
@@ -1041,7 +1000,7 @@ export function ImportRecipe() {
                     }`}
                     onClick={() => toggleMethod(method)}
                   >
-                    {method}
+                    {methodLabel(method)}
                   </Badge>
                 ))}
               </div>
@@ -1249,7 +1208,7 @@ export function ImportRecipe() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-10">
-        <h1 className="text-2xl font-semibold text-foreground mb-2">Import Recipe</h1>
+        <h1 className="text-2xl font-semibold text-foreground mb-2">Add a recipe</h1>
         <p className="text-muted-foreground text-sm">
           Add a new recipe to your collection
         </p>

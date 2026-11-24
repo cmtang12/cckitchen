@@ -20,6 +20,7 @@ import { Link, useNavigate } from "react-router";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { formatCookingTime } from "../utils/formatTime";
+import { tagLabel, methodLabel } from "../utils/recipeOptions";
 
 const RECIPE_CARD_TYPE = "RECIPE_CARD";
 
@@ -855,7 +856,7 @@ export function SavedPlans() {
                                         variant="outline"
                                         className="text-xs border-border/50"
                                       >
-                                        {tag}
+                                        {tagLabel(tag)}
                                       </Badge>
                                     ))}
                                   </div>
@@ -942,7 +943,7 @@ export function SavedPlans() {
                                   variant="outline"
                                   className="text-xs border-border/50"
                                 >
-                                  {tag}
+                                  {tagLabel(tag)}
                                 </Badge>
                               ))}
                             </div>

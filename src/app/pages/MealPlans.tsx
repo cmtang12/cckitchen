@@ -72,7 +72,7 @@ export function MealPlans() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header with Generate Button */}
         <div className="mb-8 flex items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold text-foreground">Meal Plans</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Meal plans</h1>
           <Button
             onClick={() => setShowGenerateDialog(true)}
             className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shrink-0"

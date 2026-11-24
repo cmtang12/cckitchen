@@ -35,71 +35,18 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const cookingMethods: CookingMethod[] = [
-  "stovetop",
-  "oven",
-  "air fryer",
-  "slow cooker",
-  "instant pot",
-  "grill",
-  "microwave",
-  "rice cooker",
-  "no cook",
-];
+import { COOKING_METHODS, TAGS, TAG_LABELS, CATEGORIES, CATEGORY_LABELS, MEAL_COMPONENTS, MEAL_COMPONENT_LABELS, CUISINES, CUISINE_LABELS, tagLabel, methodLabel, allTags } from "../utils/recipeOptions";
 
-const cookingMethodIcons: Record<CookingMethod, string> = {
-  "stovetop": "🍳",
-  "oven": "🔥",
-  "air fryer": "💨",
-  "slow cooker": "🥘",
-  "instant pot": "⚡",
-  "grill": "🔥",
-  "microwave": "📡",
-  "rice cooker": "🍚",
-  "no cook": "✨",
-};
-
-const availableTags: RecipeTag[] = [
-  "lily-safe",
-  "tried-true",
-  "want-to-try",
-  "high-protein",
-  "quick-easy",
-];
-
-const tagLabels: Record<RecipeTag, string> = {
-  "lily-safe": "Lily Safe",
-  "tried-true": "Tried & True",
-  "want-to-try": "Want to Try",
-  "high-protein": "High Protein",
-  "quick-easy": "Quick & Easy",
-};
-
-const availableCategories: Array<Recipe["category"]> = ["appetizer", "side", "main-course", "dessert", "breakfast", "snack"];
-const availableMealComponents: Array<Recipe["mealComponent"]> = ["protein", "veggie", "carb", "complete-meal"];
-const availableCuisineTypes = ["american", "asian", "hispanic"];
-
-const categoryLabels: Record<string, string> = {
-  "side": "Side",
-  "appetizer": "Appetizer",
-  "main-course": "Main Course",
-  "dessert": "Dessert",
-  "snack": "Snack",
-  "breakfast": "Breakfast",
-};
-
-const mealComponentLabels: Record<MealComponent, string> = {
-  "protein": "Protein",
-  "veggie": "Veggie",
-  "carb": "Carb",
-  "complete-meal": "Complete Meal",
-};
-
-const cuisineTypeLabels: Record<CuisineType, string> = {
-  "asian": "Asian",
-  "american": "American",
-  "hispanic": "Hispanic",
-};
+// Shared with every other screen so labels and options always match.
+const cookingMethods = COOKING_METHODS;
+const availableTags = TAGS;
+const tagLabels = TAG_LABELS;
+const availableCategories = CATEGORIES;
+const categoryLabels = CATEGORY_LABELS;
+const availableMealComponents = MEAL_COMPONENTS;
+const mealComponentLabels = MEAL_COMPONENT_LABELS;
+const availableCuisineTypes = CUISINES;
+const cuisineTypeLabels = CUISINE_LABELS;
 
 export function RecipeDetail() {
   const { id } = useParams<{ id: string }>();
@@ -620,7 +567,7 @@ export function RecipeDetail() {
                     }`}
                     onClick={() => toggleMethod(method)}
                   >
-                    {method}
+                    {methodLabel(method)}
                   </Badge>
                 ))}
               </div>
@@ -985,44 +932,29 @@ export function RecipeDetail() {
               {recipe.name}
             </h1>
             
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-3">
-              <div className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4" />
-                <span>{formatCookingTime(recipe.cookingTime)}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Users className="w-4 h-4" />
-                <span>{recipe.servings} servings</span>
-              </div>
-            </div>
+            {/* Time, servings and how it's cooked, in plain words (same order as the cards) */}
+            <p className="text-sm text-muted-foreground mb-3">
+              {[
+                formatCookingTime(recipe.cookingTime),
+                `${recipe.servings} servings`,
+                recipe.cookingMethod.map(methodLabel).join(", "),
+              ].filter(Boolean).join(" · ")}
+            </p>
 
             {/* Tags */}
-            {recipe.tags.length > 0 && (
+            {allTags(recipe).length > 0 && (
               <div className="flex flex-wrap gap-2 mb-3">
-                {recipe.tags.map((tag) => (
+                {allTags(recipe).map((tag) => (
                   <Badge
                     key={tag}
                     variant="outline"
                     className="rounded-full border-border/50 bg-muted/30 text-foreground text-xs"
                   >
-                    {tagLabels[tag]}
+                    {tagLabel(tag)}
                   </Badge>
                 ))}
               </div>
             )}
-
-            {/* Cooking Methods */}
-            <div className="flex items-center gap-2 mb-3">
-              {recipe.cookingMethod.map((method) => (
-                <div
-                  key={method}
-                  className="flex items-center gap-1.5 bg-muted/50 rounded-full px-2.5 py-0.5 border border-border/30"
-                >
-                  <span className="text-sm">{cookingMethodIcons[method]}</span>
-                  <span className="text-xs text-muted-foreground capitalize">{method}</span>
-                </div>
-              ))}
-            </div>
 
             {/* Source Link */}
             {recipe.source && (
@@ -1045,7 +977,7 @@ export function RecipeDetail() {
         <Button
           onClick={() => setShowCookingMode(true)}
           size="lg"
-          className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground rounded-xl shadow-lg hover:shadow-xl transition-all"
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-full transition-all"
         >
           <Play className="w-5 h-5 mr-2 fill-current" />
           Start Cooking Mode

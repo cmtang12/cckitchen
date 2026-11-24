@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { CatMark } from "./CatMark";
 import { Link, useLocation } from "react-router";
 import {
   BookOpen,
@@ -18,9 +19,9 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { path: "/", icon: BookOpen, label: "Recipes" },
-  { path: "/meal-plans", icon: Calendar, label: "Meal Plans" },
-  { path: "/grocery-list", icon: ShoppingBasket, label: "Grocery List" },
-  { path: "/dashboard", icon: BarChart3, label: "Dashboard" },
+  { path: "/meal-plans", icon: Calendar, label: "Meal plans" },
+  { path: "/grocery-list", icon: ShoppingBasket, label: "Groceries" },
+  { path: "/dashboard", icon: BarChart3, label: "Stats" },
 ];
 
 interface SidebarProps {
@@ -50,15 +51,13 @@ export function Sidebar({ onLogout }: SidebarProps) {
         {/* Logo / Brand */}
         <div className="h-16 flex items-center px-4 border-b border-border">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <span className="text-sm font-semibold text-primary">C&C</span>
-            </div>
+            <CatMark className="w-8 h-8 flex-shrink-0 text-[#9c5434]" counter={false} />
             <span 
               className={`font-semibold text-foreground whitespace-nowrap transition-opacity duration-300 ${
                 isExpanded ? "opacity-100" : "opacity-0"
               }`}
             >
-              C&C's Kitchen
+              C&amp;C's Kitchen
             </span>
           </div>
         </div>
@@ -100,7 +99,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
         <div className="p-2 border-t border-border">
           <button
             onClick={onLogout}
-            title="Logout"
+            title="Log out"
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-all"
           >
             <LogOut className="w-5 h-5 flex-shrink-0" />
@@ -109,7 +108,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
                 isExpanded ? "opacity-100" : "opacity-0 w-0"
               }`}
             >
-              Logout
+              Log out
             </span>
           </button>
         </div>

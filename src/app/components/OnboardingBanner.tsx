@@ -10,7 +10,7 @@ export function OnboardingBanner() {
   if (!isVisible) return null;
 
   return (
-    <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-accent">
+    <Card className="border-primary/20 bg-card">
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-5">
           <div>

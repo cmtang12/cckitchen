@@ -7,7 +7,7 @@ import { Input } from "../components/ui/input";
 import { Link } from "react-router";
 import { MealPlan, Recipe, Ingredient } from "../types";
 import { toast } from "sonner";
-import { cleanIngredientName, normalizeIngredientKey, formatDisplayName, formatEstimate } from "../utils/groceryList";
+import { cleanIngredientName, normalizeIngredientKey, formatDisplayName, buildGroceryItems, formatSingleAmount, AISLE_ORDER, AISLE_NAMES, SourceIngredient } from "../utils/groceryList";
 import {
   Select,
   SelectContent,
@@ -19,82 +19,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 
-// Categories for organizing ingredients
-const INGREDIENT_CATEGORIES = {
-  produce: ["onion", "garlic", "tomato", "lettuce", "carrot", "celery", "potato", "bell pepper", "spinach", "broccoli", "cauliflower", "cucumber", "zucchini", "mushroom", "corn", "peas", "bean", "lemon", "lime", "orange", "apple", "banana", "avocado", "fresh herbs", "parsley", "cilantro", "fresh basil", "fresh thyme", "fresh rosemary", "ginger", "kale", "cabbage", "squash", "eggplant", "asparagus", "green bean", "snap pea"],
-  meat: ["chicken", "beef", "pork", "turkey", "lamb", "duck", "bacon", "sausage", "ham", "steak", "ground beef", "ground turkey", "ground chicken", "ribeye", "sirloin", "tenderloin", "thigh", "breast", "drumstick", "wing"],
-  dairy: ["milk", "cheese", "butter", "cream", "yogurt", "sour cream", "cottage cheese", "cheddar", "mozzarella", "parmesan", "feta", "goat cheese", "cream cheese", "heavy cream", "half and half", "whipping cream", "egg"],
-  frozen: ["frozen"],
-  spices: ["salt", "pepper", "black pepper", "white pepper", "red pepper", "red pepper flakes", "crushed red pepper", "cayenne", "paprika", "cumin", "coriander", "turmeric", "cinnamon", "nutmeg", "cloves", "cardamom", "curry", "chili powder", "garlic powder", "onion powder", "oregano", "dried thyme", "dried rosemary", "dried basil", "sage", "bay leaf", "bay leaves", "dill", "tarragon", "fennel", "allspice", "ginger powder", "ground ginger", "mustard powder", "cornstarch", "corn starch", "powder", "dried", "ground", "crushed", "spice", "seasoning", "vanilla extract", "almond extract", "extract"],
-  pantry: ["stock", "broth", "oil", "olive oil", "vegetable oil", "canola oil", "coconut oil", "sesame oil", "cooking oil", "vinegar", "apple cider vinegar", "balsamic vinegar", "red wine vinegar", "white wine vinegar", "rice vinegar", "tomato paste", "paste"] // Explicitly include stock, broth, oils, vinegars, and pastes
-};
-
 interface CategorizedIngredient {
   key: string; // stable identity used for merging/checking/removing/editing, independent of display text
   name: string;
-  estimate: string; // e.g. "(2)", or "" when no meaningful count (measured amounts like "1 tablespoon")
+  estimate: string; // combined amount to buy, e.g. "2 tsp", "3", or "" when nothing is measurable
   amounts: Array<{ amount: string; recipeId: string }>;
   recipeNames: string[];
   category: string;
 }
 
-function categorizeIngredient(ingredientName: string): string {
-  const lowerName = ingredientName.toLowerCase();
-  
-  // Check for frozen items first - highest priority for frozen
-  if (lowerName.includes("frozen")) {
-    return "frozen";
-  }
-  
-  // Check for oil to ensure they go to pantry
-  if (lowerName.includes("oil")) {
-    return "pantry";
-  }
-  
-  // Check for vinegar to ensure they go to pantry
-  if (lowerName.includes("vinegar")) {
-    return "pantry";
-  }
-  
-  // Check for stock/broth to ensure they go to pantry
-  if (lowerName.includes("stock") || lowerName.includes("broth")) {
-    return "pantry";
-  }
-  
-  // Check for paste (tomato paste, etc.) to ensure they go to pantry
-  if (lowerName.includes("paste")) {
-    return "pantry";
-  }
-  
-  // Check for spice indicators (before produce, since many spices contain produce words)
-  // Strong spice indicators
-  const spiceIndicators = ["powder", "ground", "dried", "crushed", "extract", "seasoning", "spice"];
-  for (const indicator of spiceIndicators) {
-    if (lowerName.includes(indicator)) {
-      return "spices";
-    }
-  }
-  
-  // Check specific spice keywords
-  const spiceKeywords = INGREDIENT_CATEGORIES.spices;
-  for (const keyword of spiceKeywords) {
-    if (lowerName.includes(keyword)) {
-      return "spices";
-    }
-  }
-  
-  // Then check other categories
-  for (const [category, keywords] of Object.entries(INGREDIENT_CATEGORIES)) {
-    if (category === "pantry" || category === "spices" || category === "frozen") continue; // Already checked
-    
-    for (const keyword of keywords) {
-      if (lowerName.includes(keyword)) {
-        return category;
-      }
-    }
-  }
-  
-  return "pantry"; // Default category
+// Older saved edits stored counts as "(2)"; show them as plain "2".
+function displayAmount(estimate: string): string {
+  return estimate.replace(/^\((.*)\)$/, "$1");
 }
 
 // Draggable Ingredient Item Component
@@ -118,7 +54,7 @@ const DraggableIngredient = ({ item, isChecked, onToggleCheck, onRemove, onEdit 
   return (
     <div
       ref={preview}
-      className={`flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:border-border transition-colors group ${
+      className={`flex items-start gap-3 px-2 py-2.5 rounded-lg hover:bg-muted/30 transition-colors group ${
         isDragging ? 'opacity-40' : ''
       }`}
     >
@@ -137,15 +73,20 @@ const DraggableIngredient = ({ item, isChecked, onToggleCheck, onRemove, onEdit 
         className="cursor-move flex-shrink-0 mt-0.5"
         title="Drag to move to another category"
       >
-        <GripVertical className="w-4 h-4 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
+        <GripVertical className="hidden md:block w-4 h-4 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium transition-all ${
+        <p className={`text-sm transition-all flex items-baseline justify-between gap-3 ${
           isChecked
             ? "line-through text-muted-foreground/50"
             : "text-foreground"
         }`}>
-          {item.name}{item.estimate ? ` ${item.estimate}` : ""}
+          <span className="font-medium">{item.name}</span>
+          {item.estimate && (
+            <span className={`text-sm tabular-nums whitespace-nowrap ${isChecked ? "" : "text-muted-foreground"}`}>
+              {displayAmount(item.estimate)}
+            </span>
+          )}
         </p>
         {item.recipeNames.length > 1 && (
           <p className={`text-xs mt-0.5 transition-opacity ${
@@ -161,7 +102,7 @@ const DraggableIngredient = ({ item, isChecked, onToggleCheck, onRemove, onEdit 
         variant="ghost"
         size="icon"
         onClick={() => onEdit(item)}
-        className="h-7 w-7 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+        className="h-7 w-7 text-muted-foreground/60 hover:text-foreground md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0"
         title="Edit ingredient"
       >
         <Pencil className="w-3.5 h-3.5" />
@@ -170,7 +111,7 @@ const DraggableIngredient = ({ item, isChecked, onToggleCheck, onRemove, onEdit 
         variant="ghost"
         size="icon"
         onClick={() => onRemove(item.key)}
-        className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+        className="h-7 w-7 text-muted-foreground/60 hover:text-destructive md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0"
         title="Remove ingredient"
       >
         <X className="w-4 h-4" />
@@ -400,71 +341,37 @@ export function GroceryList() {
     const plan = mealPlans.find((p) => p.id === selectedPlanId);
     if (!plan) return {};
 
-    // Collect all ingredients from all meals in the plan, merging duplicates
-    // (e.g. "1/2 onion" in two recipes) by a normalized key rather than raw text.
-    interface RawIngredientGroup {
-      rawName: string;
-      amounts: Array<{ amount: string; recipeId: string }>;
-      recipeNames: string[];
-      category: string;
-    }
-    const ingredientMap = new Map<string, RawIngredientGroup>();
-
+    // Collect every ingredient from every meal in the plan. A recipe planned twice
+    // counts twice. Same foods are merged and their amounts added up.
+    const sources: SourceIngredient[] = [];
     plan.meals.forEach((meal) => {
       const recipe = recipeMap.get(meal.recipeId);
-      if (recipe) {
-        recipe.ingredients.forEach((ing) => {
-          const key = normalizeIngredientKey(ing.name) || ing.name.toLowerCase().trim();
-          if (!key) return;
-
-          if (ingredientMap.has(key)) {
-            const existing = ingredientMap.get(key)!;
-            existing.amounts.push({ amount: ing.amount, recipeId: recipe.id });
-            if (!existing.recipeNames.includes(recipe.name)) {
-              existing.recipeNames.push(recipe.name);
-            }
-          } else {
-            const cleanedName = cleanIngredientName(ing.name) || ing.name.trim();
-            // Check for user override first, then auto-categorize
-            const autoCategory = categorizeIngredient(cleanedName);
-            const category = categoryOverrides.get(key) || autoCategory;
-            ingredientMap.set(key, {
-              rawName: cleanedName,
-              amounts: [{ amount: ing.amount, recipeId: recipe.id }],
-              recipeNames: [recipe.name],
-              category,
-            });
-          }
+      if (!recipe) return;
+      recipe.ingredients.forEach((ing) => {
+        sources.push({
+          name: ing.name,
+          amount: ing.amount,
+          category: ing.category,
+          recipeId: recipe.id,
+          recipeName: recipe.name,
         });
-      }
+      });
     });
 
-    // Group by category
-    const categorized: Record<string, CategorizedIngredient[]> = {
-      produce: [],
-      meat: [],
-      dairy: [],
-      frozen: [],
-      spices: [],
-      pantry: [],
-    };
+    const categorized: Record<string, CategorizedIngredient[]> = {};
+    AISLE_ORDER.forEach((aisle) => { categorized[aisle] = []; });
 
-    ingredientMap.forEach((group, key) => {
-      // Skip removed ingredients
-      if (removedIngredients.has(key)) return;
-
-      const estimate = formatEstimate(group.amounts.map((a) => a.amount));
+    buildGroceryItems(sources).forEach((merged) => {
+      if (removedIngredients.has(merged.key)) return;
       const item: CategorizedIngredient = {
-        key,
-        name: formatDisplayName(group.rawName, estimate !== ""),
-        estimate,
-        amounts: group.amounts,
-        recipeNames: group.recipeNames,
-        category: group.category,
+        key: merged.key,
+        name: merged.name,
+        estimate: merged.amount,
+        amounts: merged.lines,
+        recipeNames: merged.recipeNames,
+        category: merged.category,
       };
-
-      // Apply category override if exists
-      const finalCategory = categoryOverrides.get(key) || item.category;
+      const finalCategory = categoryOverrides.get(merged.key) || item.category;
       (categorized[finalCategory] ?? (categorized[finalCategory] = [])).push(item);
     });
 
@@ -515,14 +422,7 @@ export function GroceryList() {
     toast.success(`Moved ${findItemName(key)} to ${categoryNames[targetCategory]}`);
   };
 
-  const categoryNames: Record<string, string> = {
-    produce: "Produce",
-    meat: "Meat & Seafood",
-    dairy: "Dairy & Eggs",
-    frozen: "Frozen",
-    spices: "Spices",
-    pantry: "Pantry & Other"
-  };
+  const categoryNames: Record<string, string> = AISLE_NAMES;
 
   const categorizedList = useMemo(
     () => generateGroceryList(),
@@ -573,36 +473,16 @@ export function GroceryList() {
     const selectedPlan = mealPlans.find((p) => p.id === selectedPlanId);
     const planName = selectedPlan?.name || "Meal Plan";
     
-    let text = `SmartMeal Planner - Grocery List\n`;
-    text += `${planName}\n`;
-    text += `Generated: ${new Date().toLocaleDateString()}\n\n`;
-    text += `SHOPPING LIST\n`;
-    text += `${"=".repeat(40)}\n\n`;
-
-    const categoryNames: Record<string, string> = {
-      produce: "PRODUCE",
-      meat: "MEAT & SEAFOOD",
-      dairy: "DAIRY & EGGS",
-      frozen: "FROZEN",
-      spices: "SPICES",
-      pantry: "PANTRY & OTHER"
-    };
+    let text = `${planName} · Grocery list\n\n`;
 
     Object.entries(categorizedList).forEach(([category, items]) => {
-      if (items.length === 0) return;
-      
-      text += `${categoryNames[category]}\n`;
-      text += `${"-".repeat(40)}\n`;
-      
+      if (items.length === 0 || removedCategories.has(category)) return;
+      text += `${(categoryNames[category] || category).toUpperCase()}\n`;
       items.forEach((item) => {
         text += `☐ ${item.name}`;
-        if (item.estimate) text += ` ${item.estimate}`;
-        if (item.recipeNames.length > 1) {
-          text += ` — used in ${item.recipeNames.length} recipes`;
-        }
+        if (item.estimate) text += ` · ${displayAmount(item.estimate)}`;
         text += `\n`;
       });
-      
       text += `\n`;
     });
 
@@ -659,7 +539,7 @@ export function GroceryList() {
   };
 
   const shareViaEmail = () => {
-    const subject = encodeURIComponent("SmartMeal Planner - Grocery List");
+    const subject = encodeURIComponent("Grocery list");
     const body = encodeURIComponent(formatGroceryListText());
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
@@ -672,7 +552,7 @@ export function GroceryList() {
 
     try {
       const shareData = {
-        title: "SmartMeal Planner - Grocery List",
+        title: "Grocery list",
         text: formatGroceryListText(),
       };
 
@@ -704,10 +584,10 @@ export function GroceryList() {
     const key = normalizeIngredientKey(rawName) || rawName.toLowerCase();
     const category = categoryOverrides.get(key) || newItemCategory;
     const amount = newItemAmount.trim();
-    const estimate = amount ? formatEstimate([amount]) : '';
+    const estimate = formatSingleAmount(amount);
     const newItem: CategorizedIngredient = {
       key,
-      name: formatDisplayName(cleanIngredientName(rawName) || rawName, estimate !== ""),
+      name: formatDisplayName(cleanIngredientName(rawName) || rawName, false),
       estimate,
       amounts: amount ? [{ amount, recipeId: 'adhoc' }] : [],
       recipeNames: [],
@@ -781,7 +661,7 @@ export function GroceryList() {
   const startEdit = (item: CategorizedIngredient) => {
     setEditingKey(item.key);
     setEditName(item.name);
-    setEditEstimate(item.estimate.replace(/^\(|\)$/g, ''));
+    setEditEstimate(displayAmount(item.estimate));
   };
 
   const cancelEdit = () => {
@@ -798,7 +678,7 @@ export function GroceryList() {
       return;
     }
     const estimateRaw = editEstimate.trim();
-    const estimate = estimateRaw ? (estimateRaw.startsWith('(') ? estimateRaw : `(${estimateRaw})`) : '';
+    const estimate = displayAmount(estimateRaw);
     setItemEdits(prev => {
       const newMap = new Map(prev);
       newMap.set(editingKey, { name, estimate });
@@ -834,9 +714,9 @@ export function GroceryList() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="mb-10">
-          <h1 className="text-3xl font-semibold text-foreground mb-2">Grocery List</h1>
+          <h1 className="text-2xl font-semibold text-foreground mb-2">Groceries</h1>
           <p className="text-muted-foreground text-sm">
-            Automatically generated shopping lists from your meal plans
+            Your list builds itself from a meal plan.
           </p>
         </div>
 
@@ -870,7 +750,7 @@ export function GroceryList() {
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-semibold text-foreground mb-6">Meal Plan</h1>
+        <h1 className="text-2xl font-semibold text-foreground mb-4">Groceries</h1>
         <Select value={selectedPlanId || undefined} onValueChange={setSelectedPlanId}>
           <SelectTrigger className="w-full border-border/50">
             <SelectValue placeholder="Select a meal plan" />
@@ -888,7 +768,7 @@ export function GroceryList() {
       <Tabs defaultValue="menu">
         <TabsList className="mb-6">
           <TabsTrigger value="menu">Menu</TabsTrigger>
-          <TabsTrigger value="grocery">Grocery List</TabsTrigger>
+          <TabsTrigger value="grocery">Shopping list</TabsTrigger>
         </TabsList>
 
         {/* ── MENU TAB ── */}
@@ -1042,7 +922,7 @@ export function GroceryList() {
                   className="flex-1"
                 />
                 <Input
-                  placeholder="Estimate (optional)"
+                  placeholder="Amount (optional)"
                   value={newItemAmount}
                   onChange={e => setNewItemAmount(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') addAdHocItem(); if (e.key === 'Escape') setShowAddForm(false); }}
@@ -1069,7 +949,7 @@ export function GroceryList() {
             ) : (
               <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)} className="w-full border-dashed text-muted-foreground hover:text-foreground">
                 <Plus className="w-4 h-4 mr-2" />
-                Add Ingredient
+                Add an item
               </Button>
             )}
           </div>
@@ -1089,7 +969,7 @@ export function GroceryList() {
                   </div>
                   <DroppableCategory category={category} onDrop={moveIngredient}>
                     <Card className="border-border/50">
-                      <CardContent className="p-6">
+                      <CardContent className="p-2 sm:p-4">
                         <div className="space-y-2">
                           {items.map((item) => (
                             editingKey === item.key ? (
@@ -1107,7 +987,7 @@ export function GroceryList() {
                                 <Input
                                   value={editEstimate}
                                   onChange={e => setEditEstimate(e.target.value)}
-                                  placeholder="Estimate e.g. 2"
+                                  placeholder="Amount, e.g. 2 tsp"
                                   onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
                                   className="sm:w-32"
                                 />

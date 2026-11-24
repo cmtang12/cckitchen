@@ -11,8 +11,8 @@
   --popover: #ffffff;
   --popover-foreground: #37352f;
   
-  /* Soft terracotta/sage as primary accent */
-  --primary: #d4a373;
+  /* Warm rust, the same as the cat logo's line */
+  --primary: #9c5434;
   --primary-foreground: #ffffff;
   
   /* Warm neutrals */
@@ -35,7 +35,7 @@
   
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #d4a373;
+  --ring: #9c5434;
   
   /* Charts - warm, muted palette */
   --chart-1: #d4a373;
@@ -49,12 +49,12 @@
   /* Sidebar - warm cream */
   --sidebar: #faf9f7;
   --sidebar-foreground: #37352f;
-  --sidebar-primary: #d4a373;
+  --sidebar-primary: #9c5434;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f7f6f3;
   --sidebar-accent-foreground: #37352f;
   --sidebar-border: rgba(55, 53, 47, 0.09);
-  --sidebar-ring: #d4a373;
+  --sidebar-ring: #9c5434;
 }
 
 .dark {

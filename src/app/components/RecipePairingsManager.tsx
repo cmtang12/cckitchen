@@ -14,8 +14,9 @@ interface RecipePairingsManagerProps {
   onPairingsChange: (pairings: string[]) => void;
 }
 
-const categoryLabels: Record<RecipeCategory, string> = {
-  "main course": "Main Courses",
+const categoryLabels: Record<string, string> = {
+  "breakfast": "Breakfast",
+  "main-course": "Main Courses",
   "side": "Sides",
   "appetizer": "Appetizers",
   "dessert": "Desserts",
@@ -34,19 +35,19 @@ export function RecipePairingsManager({
 
   // Get suggested categories based on current recipe
   const getSuggestedCategories = (): RecipeCategory[] => {
-    if (currentRecipe.category === "main course") {
+    if (currentRecipe.category === "main-course") {
       return ["side", "appetizer", "dessert"];
     }
     if (currentRecipe.category === "side") {
-      return ["main course"];
+      return ["main-course"];
     }
     if (currentRecipe.category === "appetizer") {
-      return ["main course", "dessert"];
+      return ["main-course", "dessert"];
     }
     if (currentRecipe.category === "dessert") {
-      return ["main course"];
+      return ["main-course"];
     }
-    return ["main course", "side", "appetizer", "dessert"];
+    return ["main-course", "side", "appetizer", "dessert"];
   };
 
   const suggestedCategories = getSuggestedCategories();

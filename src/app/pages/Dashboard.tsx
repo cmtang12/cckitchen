@@ -142,7 +142,7 @@ export function Dashboard() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-foreground mb-1">Dashboard</h1>
+        <h1 className="text-2xl font-semibold text-foreground mb-1">Stats</h1>
         <p className="text-muted-foreground text-sm">Your cooking journey at a glance</p>
       </div>
 

@@ -1,5 +1,6 @@
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { Recipe, MealPlan } from '../types';
+import { normalizeRecipe } from '../utils/recipeOptions';
 
 const API_BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-9a4224b7`;
 
@@ -105,12 +106,12 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}, timeoutMs: 
 export const recipeAPI = {
   async getAll(): Promise<Recipe[]> {
     const data = await fetchAPI('/recipes');
-    return data.recipes || [];
+    return (data.recipes || []).map(normalizeRecipe);
   },
 
   async getById(id: string): Promise<Recipe> {
     const data = await fetchAPI(`/recipes/${id}`);
-    return data.recipe;
+    return data.recipe ? normalizeRecipe(data.recipe) : data.recipe;
   },
 
   async create(recipe: Omit<Recipe, 'id' | 'dateAdded'>): Promise<Recipe> {
