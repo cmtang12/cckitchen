@@ -235,7 +235,7 @@ export function CookingMode({ recipe: initialRecipe, onClose, startWithLily = fa
                           Step {job.index + 1}
                         </span>
                         <span className="text-[15px] leading-snug text-foreground">
-                          <span className="font-medium">{sentenceCase(job.skills.map(skillLabel).join(", "))}</span>
+                          <span className="font-medium">{job.skills.length ? sentenceCase(job.skills.map(skillLabel).join(", ")) : "Helping"}</span>
                           <span className="text-muted-foreground"> · {recipe.instructions[job.index]}</span>
                         </span>
                       </button>
@@ -258,7 +258,7 @@ export function CookingMode({ recipe: initialRecipe, onClose, startWithLily = fa
                       {step.forLily && (
                         <span className="inline-flex items-center gap-1.5 text-sm font-medium rounded-full pl-1.5 pr-3 py-1" style={{ background: `${SAGE}1f`, color: SAGE }}>
                           <CatMark className="w-5 h-5" counter={false} />
-                          Lily helps · {step.skills.map(skillLabel).join(", ") || "her part"}
+                          {step.skills.length ? `Lily helps · ${step.skills.map(skillLabel).join(", ")}` : "Lily helps"}
                         </span>
                       )}
                       {step.grownUp && (
@@ -285,14 +285,18 @@ export function CookingMode({ recipe: initialRecipe, onClose, startWithLily = fa
                     </div>
                   )}
 
+                  {/* One clear switch: on = Lily helps with this step. It shows the
+                      current state and changes it, so it can't disagree with the tag. */}
                   {withLily && step && (
-                    <div className="mt-6 text-center">
-                      <button
-                        onClick={() => correctStep(currentStep, !step.forLily)}
-                        className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
-                      >
-                        {step.forLily ? "Not for Lily" : "Lily can do this"}
-                      </button>
+                    <div className="mt-6 pt-5 border-t border-border/60 flex justify-center">
+                      <label className="inline-flex items-center gap-3 cursor-pointer">
+                        <Switch
+                          checked={step.forLily}
+                          onCheckedChange={(on) => correctStep(currentStep, on)}
+                          className="data-[state=checked]:bg-[#5e8f6f]"
+                        />
+                        <span className="text-sm text-foreground">Lily helps with this step</span>
+                      </label>
                     </div>
                   )}
                 </div>

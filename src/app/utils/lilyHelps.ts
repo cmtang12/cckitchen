@@ -102,7 +102,7 @@ export async function fetchLilySkills(): Promise<LilySkill[]> {
 // --- Reading a step ---------------------------------------------------------
 
 // "baking sheet", "baking soda" etc. are things, not heat.
-const HEAT = /\b(heat|heated|stove|stovetop|skillet|frying pan|saut[eé]|sear|fry|fried|frying|boil|boiling|simmer|broil|grill|oven|bake|baking(?! (sheet|dish|pan|tray|powder|soda|paper|mat))|roast|preheat|hot oil|deep|blender|food processor|mandoline|pressure|instant pot)\b/i;
+const HEAT = /\b(heat|heated|stove|stovetop|skillet|frying pan|saut[eé]|sear|fry|fried|frying|boil|boiling|simmer|broil|grill|oven|bake|baking(?! (sheet|dish|pan|tray|powder|soda|paper|mat))|roast|preheat|hot (oil|pan|pot|skillet|water|liquid|wok|grill)|deep|blender|food processor|mandoline|pressure|instant pot)\b/i;
 const SOFT_FOODS = /\b(banana|cucumber|mushroom|strawberr|tomato|avocado|zucchini|tofu|butter|cheese|bread|kiwi|mango|peach|melon|watermelon|pear|scallion|green onion|basil|cilantro|parsley|mint|lettuce|cooked|hard[- ]boiled|egg|olive|grape|berr|cake|pancake|tortilla)/i;
 const HARD_FOODS = /\b(carrot|onion|potato|sweet potato|squash|pumpkin|celery|apple|beet|ginger|garlic|chicken|beef|pork|lamb|steak|fish|salmon|shrimp|meat|bone|cabbage|cauliflower|broccoli|corn)\b/i;
 
@@ -120,6 +120,8 @@ const RULES: Array<{ skill: LilySkill; test: (s: string) => boolean; withHeat: b
     skill: "measure",
     test: (s) =>
       /\bmeasure\b/i.test(s) ||
+      // "Make the sauce by combining…": measuring cold ingredients together (no heat in the step)
+      /\b(combin(e|ing)|whisk together|mix together)\b/i.test(s) ||
       /\b(combine|add|place|put|whisk together|mix together)\b.*\b(in|into|to) (a |the )?(large |medium |small |mixing )?bowl\b/i.test(s) ||
       /\b(in|into) (a |the )?(large |medium |small |mixing )?bowl\b.*\b(combine|add|whisk|mix|stir together)\b/i.test(s) ||
       /\b(add|put|place|combine|measure)\b[^.]*\b(\d+(\/\d+)?|one|two|half)\s*(cups?|tablespoons?|teaspoons?|tbsp|tsp)\b[^.]*\b(rice cooker|bowl|measuring cup|jar)\b/i.test(s),
