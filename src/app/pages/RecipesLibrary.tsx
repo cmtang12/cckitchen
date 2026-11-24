@@ -376,7 +376,7 @@ export function RecipesLibrary() {
             {tagLabel("lily-safe")}
           </FilterChip>
           <FilterChip selected={showLilyHelps} onClick={() => setShowLilyHelps(!showLilyHelps)}>
-            Lily helps
+            Little Helper Friendly
           </FilterChip>
           <FilterChip
             selected={selectedTags.includes("want-to-try")}
@@ -458,7 +458,7 @@ export function RecipesLibrary() {
           </FilterSection>
 
           <FilterSection title="More" count={(showOnlyCooked ? 1 : 0) + (showOnlyLoved ? 1 : 0) + (showLilyHelps ? 1 : 0)}>
-            <FilterChip selected={showLilyHelps} onClick={() => setShowLilyHelps(!showLilyHelps)}>Lily helps</FilterChip>
+            <FilterChip selected={showLilyHelps} onClick={() => setShowLilyHelps(!showLilyHelps)}>Little Helper Friendly</FilterChip>
             <FilterChip selected={showOnlyLoved} onClick={() => setShowOnlyLoved(!showOnlyLoved)}>Favorites</FilterChip>
             <FilterChip selected={showOnlyCooked} onClick={() => setShowOnlyCooked(!showOnlyCooked)}>Cooked before</FilterChip>
           </FilterSection>
