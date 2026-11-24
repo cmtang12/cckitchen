@@ -28,10 +28,8 @@ export function CatMark({ className, mood = "happy", counter = true, title = "CC
       <path d="M80 62 C66 60 62 44 72 36 C76 24 92 22 98 30 C104 20 122 22 126 34 C138 38 136 58 120 62" />
       <path d="M82 60 L82 68 C94 65 106 65 118 68 L118 60" />
       {/* Head and ears, rising from behind the counter */}
-      <path d="M52 156 C40 147 33 130 35 113 C37 99 44 89 51 84 C50 76 51 67 55 61 C58 57 62 56 66 58 C72 61 77 64 82 67" />
-      <path d="M118 67 C123 64 128 61 134 58 C138 56 142 57 145 61 C149 67 150 76 149 84 C156 89 163 99 165 113 C167 130 160 147 148 156" />
-      {/* Inner ear blush */}
-      <path d="M58 64 C56.5 68 56.5 73 57.5 78 C61 76 64 73 67 69 C64 66 61 64 58 64 Z" fill="#f2a593" stroke="none" opacity={0.9} />
+      <path d="M52 156 C40 147 33 130 35 113 C37 99 44 89 51 84 C50 75 52 66 57 62 C61 59 66 59 70 61 C74 63 78 65 82 67" />
+      <path d="M118 67 C122 65 126 63 130 61 C134 59 139 59 143 62 C148 66 150 75 149 84 C156 89 163 99 165 113 C167 130 160 147 148 156" />
       {/* Face */}
       {mood === "happy" ? (
         <>
@@ -48,10 +46,10 @@ export function CatMark({ className, mood = "happy", counter = true, title = "CC
       <ellipse cx="62" cy="126" rx="7" ry="4.5" fill="#f2a593" stroke="none" opacity={0.7} />
       <ellipse cx="138" cy="126" rx="7" ry="4.5" fill="#f2a593" stroke="none" opacity={0.7} />
       {/* Paws on the counter */}
-      <path d="M62 156 C62 144 70 140 76 140 C82 140 90 144 90 156" />
-      <path d="M110 156 C110 144 118 140 124 140 C130 140 138 144 138 156" />
-      <path d="M72 148 L72 153 M80 148 L80 153" strokeWidth={2.6} />
-      <path d="M120 148 L120 153 M128 148 L128 153" strokeWidth={2.6} />
+      <path d="M62 156 C61 148 63 143 67 142 C68 138 72 137 74 139 C75 136 79 136 80 139 C82 137 86 138 86 142 C90 143 91 149 90 156" />
+      <path d="M110 156 C109 148 111 143 115 142 C116 138 120 137 122 139 C123 136 127 136 128 139 C130 137 134 138 134 142 C138 143 139 149 138 156" />
+      <ellipse cx="76" cy="150" rx="4" ry="3" fill="#f2a593" stroke="none" opacity={0.6} />
+      <ellipse cx="124" cy="150" rx="4" ry="3" fill="#f2a593" stroke="none" opacity={0.6} />
       {counter && <path d="M26 157 L174 157" />}
     </svg>
   );
