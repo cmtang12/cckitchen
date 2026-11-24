@@ -14,11 +14,13 @@ type Props = Omit<React.ImgHTMLAttributes<HTMLImageElement>, "src"> & {
  */
 export function RecipeImage({ recipe, style, alt = "", ...imgProps }: Props) {
   const ref = useRef<HTMLImageElement>(null);
+  const [failed, setFailed] = useState(false);
   const [src, setSrc] = useState<string | null>(
     recipe.image || peekImage(recipe.id, recipe.imageVersion) || null
   );
 
   useEffect(() => {
+    setFailed(false);
     if (recipe.image) {
       setSrc(recipe.image);
       return;
@@ -64,10 +66,14 @@ export function RecipeImage({ recipe, style, alt = "", ...imgProps }: Props) {
   return (
     <img
       ref={ref}
-      src={src || BLANK}
+      src={!failed && src ? src : BLANK}
       alt={alt}
       decoding="async"
-      style={{ backgroundColor: src ? undefined : "#f1e7da", ...style }}
+      // Many recipe sites refuse photos requested from other apps; sending no
+      // referrer gets most of them to load. If one still fails, show the soft placeholder.
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+      style={{ backgroundColor: src && !failed ? undefined : "#f1e7da", ...style }}
       {...imgProps}
     />
   );

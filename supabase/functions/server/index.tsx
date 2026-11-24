@@ -351,6 +351,38 @@ app.delete("/make-server-9a4224b7/recipes/:id", async (c) => {
   }
 });
 
+// ===== PHOTO COPY =====
+// Recipe sites often block their photos from loading inside other apps, and old
+// links break. This fetches a photo on the server (where those blocks don't apply)
+// and returns it as data, so the app can save its own copy.
+app.get("/make-server-9a4224b7/fetch-image", async (c) => {
+  const url = c.req.query("url") || "";
+  if (!/^https?:\/\//i.test(url)) return c.json({ error: "Not a web address" }, 400);
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+        "Accept": "image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8",
+        "Referer": new URL(url).origin + "/",
+      },
+      redirect: "follow",
+    });
+    if (!res.ok) return c.json({ error: `The website said ${res.status}` }, 502);
+    const type = (res.headers.get("content-type") || "").split(";")[0].trim();
+    if (!type.startsWith("image/")) return c.json({ error: "That link isn't a photo" }, 422);
+    const buf = new Uint8Array(await res.arrayBuffer());
+    if (buf.byteLength > 12 * 1024 * 1024) return c.json({ error: "Photo is too big" }, 413);
+    let binary = "";
+    for (let i = 0; i < buf.length; i += 0x8000) {
+      binary += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    }
+    return c.json({ dataUrl: `data:${type};base64,${btoa(binary)}` });
+  } catch (error) {
+    console.log("Error fetching photo:", error);
+    return c.json({ error: "Couldn't reach that photo", details: String(error) }, 502);
+  }
+});
+
 // ===== SETTINGS ROUTES =====
 // Small shared settings (like Lily's skills), saved once for every phone.
 const SETTINGS_KEYS = ["lily-skills"];

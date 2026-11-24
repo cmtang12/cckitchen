@@ -933,6 +933,7 @@ export function RecipeDetail() {
               <img
                 src={recipe.image}
                 alt={recipe.name}
+                referrerPolicy="no-referrer"
                 className="w-full h-48 md:h-full object-cover"
                 onError={(e) => {
                   console.error("Failed to load image:", recipe.image);

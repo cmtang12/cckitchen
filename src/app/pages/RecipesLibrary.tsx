@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Slider } from "../components/ui/slider";
 import { formatCookingTime } from "../utils/formatTime";
 import { CatMark } from "../components/CatMark";
+import { LilySkill, loadLilySkills, fetchLilySkills, isLilyFriendly } from "../utils/lilyHelps";
 import {
   TAGS,
   COOKING_METHODS,
@@ -124,6 +125,11 @@ export function RecipesLibrary() {
   const [ratingFilter, setRatingFilter] = useState<RatingFilter>("hide-low");
   const [showOnlyCooked, setShowOnlyCooked] = useState(false);
   const [showOnlyLoved, setShowOnlyLoved] = useState(false);
+  const [showLilyHelps, setShowLilyHelps] = useState(false);
+  const [lilySkills, setLilySkills] = useState<LilySkill[]>(loadLilySkills);
+  useEffect(() => {
+    fetchLilySkills().then(setLilySkills);
+  }, []);
 
   // Selecting several recipes at once (add to a plan, delete)
   const [selectionMode, setSelectionMode] = useState(false);
@@ -185,6 +191,7 @@ export function RecipesLibrary() {
     if (maxCookingTime[0] < MAX_TIME && recipe.cookingTime > maxCookingTime[0]) return false;
     if (showOnlyCooked && !(recipe.timesCookedLog && recipe.timesCookedLog.length > 0)) return false;
     if (showOnlyLoved && !recipe.isLoved) return false;
+    if (showLilyHelps && !isLilyFriendly(recipe, lilySkills)) return false;
     return true;
   };
 
@@ -193,7 +200,7 @@ export function RecipesLibrary() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     recipes, searchQuery, selectedTags, selectedMethods, selectedCuisines, selectedCategories,
-    selectedComponents, maxCookingTime, ratingFilter, showOnlyCooked, showOnlyLoved,
+    selectedComponents, maxCookingTime, ratingFilter, showOnlyCooked, showOnlyLoved, showLilyHelps, lilySkills,
   ]);
 
   const clearFilters = () => {
@@ -207,6 +214,7 @@ export function RecipesLibrary() {
     setRatingFilter("all");
     setShowOnlyCooked(false);
     setShowOnlyLoved(false);
+    setShowLilyHelps(false);
   };
 
   // The rating filter is on by default (hiding 3★ and under), so the Filters
@@ -220,7 +228,8 @@ export function RecipesLibrary() {
     (maxCookingTime[0] < MAX_TIME ? 1 : 0) +
     (ratingFilter !== "all" ? 1 : 0) +
     (showOnlyCooked ? 1 : 0) +
-    (showOnlyLoved ? 1 : 0);
+    (showOnlyLoved ? 1 : 0) +
+    (showLilyHelps ? 1 : 0);
   const hasFilters = activeFilterCount > 0 || searchQuery.length > 0;
 
   // Selection
@@ -366,6 +375,9 @@ export function RecipesLibrary() {
           >
             {tagLabel("lily-safe")}
           </FilterChip>
+          <FilterChip selected={showLilyHelps} onClick={() => setShowLilyHelps(!showLilyHelps)}>
+            Lily helps
+          </FilterChip>
           <FilterChip
             selected={selectedTags.includes("want-to-try")}
             onClick={() => setSelectedTags(toggleIn(selectedTags, "want-to-try"))}
@@ -445,7 +457,8 @@ export function RecipesLibrary() {
             </div>
           </FilterSection>
 
-          <FilterSection title="More" count={(showOnlyCooked ? 1 : 0) + (showOnlyLoved ? 1 : 0)}>
+          <FilterSection title="More" count={(showOnlyCooked ? 1 : 0) + (showOnlyLoved ? 1 : 0) + (showLilyHelps ? 1 : 0)}>
+            <FilterChip selected={showLilyHelps} onClick={() => setShowLilyHelps(!showLilyHelps)}>Lily helps</FilterChip>
             <FilterChip selected={showOnlyLoved} onClick={() => setShowOnlyLoved(!showOnlyLoved)}>Favorites</FilterChip>
             <FilterChip selected={showOnlyCooked} onClick={() => setShowOnlyCooked(!showOnlyCooked)}>Cooked before</FilterChip>
           </FilterSection>

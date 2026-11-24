@@ -1,3 +1,16 @@
+import { projectId, publicAnonKey } from '/utils/supabase/info';
+
+/** Gets a photo from another website through our server, as a data URL. */
+export async function fetchImageViaServer(url: string): Promise<string> {
+  const res = await fetch(
+    `https://${projectId}.supabase.co/functions/v1/make-server-9a4224b7/fetch-image?url=${encodeURIComponent(url)}`,
+    { headers: { Authorization: `Bearer ${publicAnonKey}` } }
+  );
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || !body.dataUrl) throw new Error(body.error || `Photo copy failed (${res.status})`);
+  return body.dataUrl;
+}
+
 /**
  * Compresses an image to a target size while maintaining aspect ratio
  * @param dataUrl Base64 data URL of the image
@@ -74,16 +87,23 @@ export async function fetchAndCompressImage(
   quality?: number
 ): Promise<string> {
   try {
-    const response = await fetch(url);
-    const blob = await response.blob();
-
-    // Convert blob to data URL
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
+    let dataUrl: string;
+    try {
+      // Fast path: the browser can fetch it directly.
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      if (!blob.type.startsWith('image/')) throw new Error('Not an image');
+      dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      // Most recipe sites block that; ask our server to fetch it instead.
+      dataUrl = await fetchImageViaServer(url);
+    }
 
     // Compress the image
     return await compressImage(dataUrl, maxWidth, maxHeight, quality);

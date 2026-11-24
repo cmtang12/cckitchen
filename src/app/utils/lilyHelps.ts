@@ -202,3 +202,22 @@ export function stepMinutes(step: string): number | undefined {
   const n = Number(d[2] || d[1]);
   return /hour|hr/i.test(d[3]) ? n * 60 : n;
 }
+
+// --- "Lily helps" quick filter ---------------------------------------------
+// Counts hands-on jobs only: a step where her only job is pressing the timer
+// doesn't make a recipe one she can really help with.
+export const LILY_FRIENDLY_MIN_JOBS = 2;
+export const LILY_FRIENDLY_MIN_SHARE = 0.3;
+
+export function handsOnJobs(recipe: Pick<Recipe, "instructions" | "lilySteps">, skills: LilySkill[]): number {
+  return readRecipe(recipe, skills).steps.filter(
+    (s) => s.forLily && (s.corrected || s.skills.some((k) => k !== "timer"))
+  ).length;
+}
+
+export function isLilyFriendly(recipe: Pick<Recipe, "instructions" | "lilySteps">, skills: LilySkill[]): boolean {
+  const total = recipe.instructions?.length || 0;
+  if (!total) return false;
+  const jobs = handsOnJobs(recipe, skills);
+  return jobs >= LILY_FRIENDLY_MIN_JOBS && jobs / total >= LILY_FRIENDLY_MIN_SHARE;
+}
