@@ -24,9 +24,10 @@ export function CatMark({ className, mood = "happy", counter = true, title = "CC
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      {/* Chef hat */}
-      <path d="M80 62 C66 60 62 44 72 36 C76 24 92 22 98 30 C104 20 122 22 126 34 C138 38 136 58 120 62" />
-      <path d="M82 60 L82 68 C94 65 106 65 118 68 L118 60" />
+      {/* Chef hat: a tall band-and-body with a puffy top */}
+      <path d="M84 46 C70 46 64 32 72 22 C72 8 90 2 99 11 C108 1 128 6 127 22 C136 31 130 46 116 46" />
+      <path d="M85 44 L84 62 M115 44 L116 62" />
+      <path d="M82 61 L82 69 C94 66 106 66 118 69 L118 61 C106 58 94 58 82 61" />
       {/* Head and ears, rising from behind the counter */}
       <path d="M52 156 C40 147 33 130 35 113 C37 99 44 89 51 84 C50 75 52 66 57 62 C61 59 66 59 70 61 C74 63 78 65 82 67" />
       <path d="M118 67 C122 65 126 63 130 61 C134 59 139 59 143 62 C148 66 150 75 149 84 C156 89 163 99 165 113 C167 130 160 147 148 156" />
@@ -42,7 +43,15 @@ export function CatMark({ className, mood = "happy", counter = true, title = "CC
           <path d="M112 111 Q120 117 128 111" />
         </>
       )}
-      <path d="M90 124 Q95 131 100 124 Q105 131 110 124" strokeWidth={3} />
+      {mood === "happy" ? (
+        <>
+          {/* Open mouth, ready for a bite */}
+          <path d="M93 123 C93 132 96 137 100 137 C104 137 107 132 107 123" fill="#f2a593" fillOpacity={0.55} strokeWidth={3} />
+          <path d="M89 120 Q94.5 127 100 121 Q105.5 127 111 120" strokeWidth={3} />
+        </>
+      ) : (
+        <path d="M90 124 Q95 131 100 124 Q105 131 110 124" strokeWidth={3} />
+      )}
       <ellipse cx="62" cy="126" rx="7" ry="4.5" fill="#f2a593" stroke="none" opacity={0.7} />
       <ellipse cx="138" cy="126" rx="7" ry="4.5" fill="#f2a593" stroke="none" opacity={0.7} />
       {/* Paws on the counter */}
