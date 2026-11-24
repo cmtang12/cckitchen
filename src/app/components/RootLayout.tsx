@@ -27,7 +27,7 @@ export function RootLayout() {
         {/* Mobile top bar - in normal document flow so it never overlaps page content */}
         <div className="md:hidden flex items-center justify-between h-12 px-4 border-b border-border bg-background">
           <Link to="/" className="flex items-center gap-2">
-            <CatMark className="w-7 h-7 text-[#9c5434]" counter={false} />
+            <CatMark className="w-7 h-7 text-[#9c5434]" pose="pot" />
             <span className="text-sm font-semibold text-foreground">C&amp;C's Kitchen</span>
           </Link>
           <button

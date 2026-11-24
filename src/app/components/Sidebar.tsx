@@ -51,7 +51,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
         {/* Logo / Brand */}
         <div className="h-16 flex items-center px-4 border-b border-border">
           <div className="flex items-center gap-3 overflow-hidden">
-            <CatMark className="w-8 h-8 flex-shrink-0 text-[#9c5434]" counter={false} />
+            <CatMark className="w-8 h-8 flex-shrink-0 text-[#9c5434]" pose="pot" />
             <span 
               className={`font-semibold text-foreground whitespace-nowrap transition-opacity duration-300 ${
                 isExpanded ? "opacity-100" : "opacity-0"
