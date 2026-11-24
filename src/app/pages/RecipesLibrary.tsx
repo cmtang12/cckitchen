@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
-import { recipeAPI } from "../services/api";
+import { recipeAPI, onFreshData } from "../services/api";
+import { normalizeRecipe } from "../utils/recipeOptions";
 import { Recipe } from "../types";
 import { RecipeCard } from "../components/RecipeCard";
 import { OnboardingBanner } from "../components/OnboardingBanner";
@@ -131,6 +132,12 @@ export function RecipesLibrary() {
   useEffect(() => {
     loadRecipes();
   }, [location.pathname]);
+
+  // The list opens from the saved copy; when a newer copy arrives in the background, show it.
+  useEffect(
+    () => onFreshData("/recipes", (data) => setRecipes((data?.recipes || []).map(normalizeRecipe))),
+    []
+  );
 
   const loadRecipes = async () => {
     try {
@@ -270,7 +277,7 @@ export function RecipesLibrary() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-28 md:pb-10">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-28 md:pb-10">
       {recipes.length === 0 && (
         <div className="mb-8">
           <OnboardingBanner />

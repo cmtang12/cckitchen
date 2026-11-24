@@ -1,6 +1,7 @@
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { Recipe, MealPlan } from '../types';
 import { normalizeRecipe } from '../utils/recipeOptions';
+import { idbGet, idbSet, idbDeletePrefix } from './persistentCache';
 
 const API_BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-9a4224b7`;
 
@@ -8,53 +9,95 @@ const API_BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const EXTRACTION_TIMEOUT = 45000; // 45 seconds for extraction (OCR can take time)
 
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
-const CACHE_PREFIX = 'cck_cache_';
+// How caching works:
+// - Responses are kept in memory and in IndexedDB (localStorage was too small for
+//   the recipe list with its photos, so it was never actually cached).
+// - A saved copy is shown straight away. If it's more than a couple of minutes old,
+//   a fresh copy is fetched in the background and pages listening for it update.
+// - Saving, adding or deleting updates the saved copy directly instead of throwing
+//   it away, so the next screen doesn't have to download everything again.
+const FRESH_FOR = 2 * 60 * 1000; // 2 minutes: no background refresh
+const KEEP_FOR = 30 * 24 * 60 * 60 * 1000; // 30 days: older copies are ignored
 
-// In-memory layer (fastest, cleared on mutation)
-const memCache = new Map<string, unknown>();
+interface Entry { data: any; ts: number }
+const memCache = new Map<string, Entry>();
+const inFlight = new Map<string, Promise<any>>();
+const listeners = new Map<string, Set<(data: any) => void>>();
 
-function readCache(endpoint: string): unknown | null {
-  if (memCache.has(endpoint)) return memCache.get(endpoint);
-  try {
-    const raw = localStorage.getItem(CACHE_PREFIX + endpoint);
-    if (!raw) return null;
-    const { data, ts } = JSON.parse(raw);
-    if (Date.now() - ts > CACHE_TTL) { localStorage.removeItem(CACHE_PREFIX + endpoint); return null; }
-    memCache.set(endpoint, data);
+// Clear the old localStorage cache from before (it could never hold the recipe list).
+try {
+  Object.keys(localStorage).filter(k => k.startsWith('cck_cache_')).forEach(k => localStorage.removeItem(k));
+} catch {}
+
+async function readCache(endpoint: string): Promise<Entry | null> {
+  const mem = memCache.get(endpoint);
+  if (mem) return mem;
+  const stored = await idbGet<any>(endpoint);
+  if (!stored || Date.now() - stored.ts > KEEP_FOR) return null;
+  memCache.set(endpoint, stored);
+  return stored;
+}
+
+function writeCache(endpoint: string, data: any) {
+  const entry = { data, ts: Date.now() };
+  memCache.set(endpoint, entry);
+  void idbSet(endpoint, entry);
+}
+
+/** Change a saved copy in place (after a save), keeping its age. */
+async function patchCache(endpoint: string, change: (data: any) => any) {
+  const entry = await readCache(endpoint);
+  if (!entry) return;
+  const next = { data: change(entry.data), ts: entry.ts };
+  memCache.set(endpoint, next);
+  void idbSet(endpoint, next);
+}
+
+function dropCache(endpoint: string) {
+  memCache.delete(endpoint);
+  void idbDeletePrefix(endpoint);
+}
+
+/** Get told when a background refresh brings newer data for an endpoint. */
+export function onFreshData(endpoint: string, cb: (data: any) => void): () => void {
+  if (!listeners.has(endpoint)) listeners.set(endpoint, new Set());
+  listeners.get(endpoint)!.add(cb);
+  return () => listeners.get(endpoint)?.delete(cb);
+}
+
+function refreshInBackground(endpoint: string) {
+  if (inFlight.has(endpoint)) return;
+  const p = networkGet(endpoint)
+    .then((data) => listeners.get(endpoint)?.forEach((cb) => cb(data)))
+    .catch(() => {})
+    .finally(() => inFlight.delete(endpoint));
+  inFlight.set(endpoint, p);
+}
+
+async function networkGet(endpoint: string) {
+  const existing = inFlight.get(endpoint + '#net');
+  if (existing) return existing;
+  const p = request(endpoint, {}, DEFAULT_TIMEOUT).then((data) => {
+    writeCache(endpoint, data);
     return data;
-  } catch { return null; }
-}
-
-function writeCache(endpoint: string, data: unknown) {
-  memCache.set(endpoint, data);
-  try { localStorage.setItem(CACHE_PREFIX + endpoint, JSON.stringify({ data, ts: Date.now() })); } catch {}
-}
-
-// Only the resource that was actually mutated needs its cache cleared, e.g.
-// "/recipes/abc" -> "/recipes". Scoping this means editing a meal plan doesn't
-// force the (much larger, image-heavy) recipes list to refetch on next visit.
-function getResourcePrefix(endpoint: string): string {
-  const [, resource] = endpoint.split('/');
-  return resource ? `/${resource}` : endpoint;
-}
-
-function invalidateCache(resourcePrefix: string) {
-  for (const key of Array.from(memCache.keys())) {
-    if (key.startsWith(resourcePrefix)) memCache.delete(key);
-  }
-  Object.keys(localStorage)
-    .filter(k => k.startsWith(CACHE_PREFIX + resourcePrefix))
-    .forEach(k => localStorage.removeItem(k));
+  }).finally(() => inFlight.delete(endpoint + '#net'));
+  inFlight.set(endpoint + '#net', p);
+  return p;
 }
 
 async function fetchAPI(endpoint: string, options: RequestInit = {}, timeoutMs: number = DEFAULT_TIMEOUT) {
   const isGet = !options.method || options.method === 'GET';
+  if (!isGet) return request(endpoint, options, timeoutMs);
 
-  if (isGet) {
-    const cached = readCache(endpoint);
-    if (cached !== null) return cached;
+  const cached = await readCache(endpoint);
+  if (cached) {
+    if (Date.now() - cached.ts > FRESH_FOR) refreshInBackground(endpoint);
+    return cached.data;
   }
+  return networkGet(endpoint);
+}
+
+async function request(endpoint: string, options: RequestInit, timeoutMs: number) {
   const url = `${API_BASE_URL}${endpoint}`;
   const headers = {
     'Content-Type': 'application/json',
@@ -83,12 +126,8 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}, timeoutMs: 
       throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
     }
 
-    const result = await response.json();
-    // Avoid logging full response bodies: recipe payloads embed base64 images
-    // and can be several MB, which makes devtools formatting genuinely slow.
-    if (isGet) writeCache(endpoint, result);
-    else invalidateCache(getResourcePrefix(endpoint));
-    return result;
+    // Don't log response bodies: recipe payloads embed base64 images and can be many MB.
+    return await response.json();
   } catch (error: any) {
     clearTimeout(timeoutId);
 
@@ -110,18 +149,26 @@ export const recipeAPI = {
   },
 
   async getById(id: string): Promise<Recipe> {
+    // Opening a recipe from the list: use the copy we already have instead of downloading it again.
+    if (!memCache.has(`/recipes/${id}`)) {
+      const list = await readCache('/recipes');
+      const fromList = list?.data?.recipes?.find((r: Recipe) => r.id === id);
+      if (fromList) return normalizeRecipe(fromList);
+    }
     const data = await fetchAPI(`/recipes/${id}`);
     return data.recipe ? normalizeRecipe(data.recipe) : data.recipe;
   },
 
   async create(recipe: Omit<Recipe, 'id' | 'dateAdded'>): Promise<Recipe> {
-    console.log('[API] Creating recipe:', recipe);
-    console.log('[API] Stringified recipe:', JSON.stringify(recipe));
     const data = await fetchAPI('/recipes', {
       method: 'POST',
       body: JSON.stringify(recipe),
     });
-    console.log('[API] Recipe created successfully:', data);
+    if (data.recipe) {
+      await patchCache('/recipes', (d) => ({ ...d, recipes: [...(d.recipes || []), data.recipe] }));
+    } else {
+      dropCache('/recipes');
+    }
     return data.recipe;
   },
 
@@ -130,13 +177,22 @@ export const recipeAPI = {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
-    return data.recipe;
+    const saved = data.recipe;
+    await patchCache('/recipes', (d) => ({
+      ...d,
+      recipes: (d.recipes || []).map((r: Recipe) => (r.id === id ? { ...r, ...updates, ...(saved || {}) } : r)),
+    }));
+    if (saved) writeCache(`/recipes/${id}`, { recipe: saved });
+    else dropCache(`/recipes/${id}`);
+    return saved;
   },
 
   async delete(id: string): Promise<void> {
     await fetchAPI(`/recipes/${id}`, {
       method: 'DELETE',
     });
+    await patchCache('/recipes', (d) => ({ ...d, recipes: (d.recipes || []).filter((r: Recipe) => r.id !== id) }));
+    dropCache(`/recipes/${id}`);
   },
 };
 
@@ -157,6 +213,11 @@ export const mealPlanAPI = {
       method: 'POST',
       body: JSON.stringify(plan),
     });
+    if (data.mealPlan) {
+      await patchCache('/meal-plans', (d) => ({ ...d, mealPlans: [...(d.mealPlans || []), data.mealPlan] }));
+    } else {
+      dropCache('/meal-plans');
+    }
     return data.mealPlan;
   },
 
@@ -165,13 +226,22 @@ export const mealPlanAPI = {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
-    return data.mealPlan;
+    const saved = data.mealPlan;
+    await patchCache('/meal-plans', (d) => ({
+      ...d,
+      mealPlans: (d.mealPlans || []).map((p: MealPlan) => (p.id === id ? { ...p, ...updates, ...(saved || {}) } : p)),
+    }));
+    if (saved) writeCache(`/meal-plans/${id}`, { mealPlan: saved });
+    else dropCache(`/meal-plans/${id}`);
+    return saved;
   },
 
   async delete(id: string): Promise<void> {
     await fetchAPI(`/meal-plans/${id}`, {
       method: 'DELETE',
     });
+    await patchCache('/meal-plans', (d) => ({ ...d, mealPlans: (d.mealPlans || []).filter((p: MealPlan) => p.id !== id) }));
+    dropCache(`/meal-plans/${id}`);
   },
 };
 

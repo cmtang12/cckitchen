@@ -53,7 +53,7 @@ export function MealPlans() {
       {/* Full-screen Tinder Modal - completely covers everything including nav */}
       {showTinderFullscreen && (
         <div className="fixed inset-0 bg-background z-[100] overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12 sm:pt-8">
             <TinderStyle onClose={() => setShowTinderFullscreen(false)} />
           </div>
         </div>
@@ -62,14 +62,14 @@ export function MealPlans() {
       {/* Full-screen Roulette Modal - completely covers everything including nav */}
       {showRouletteFullscreen && (
         <div className="fixed inset-0 bg-background z-[100] overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12 sm:pt-8">
             <MealPlanner onClose={() => setShowRouletteFullscreen(false)} />
           </div>
         </div>
       )}
 
       {/* Main Content - Saved Plans by default */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12 sm:pt-8">
         {/* Header with Generate Button */}
         <div className="mb-8 flex items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold text-foreground">Meal plans</h1>

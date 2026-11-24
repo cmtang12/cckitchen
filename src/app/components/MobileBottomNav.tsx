@@ -44,7 +44,7 @@ export function MobileBottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-inset-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
       <div className="flex items-end justify-between px-6 py-2 relative">
         {/* Left Nav Items */}
         <div className="flex items-center gap-4 flex-1 justify-around">

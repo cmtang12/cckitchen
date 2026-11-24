@@ -16,7 +16,7 @@ export function RootLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex overflow-x-hidden">
+    <div className="min-h-screen bg-background flex overflow-x-clip">
       {/* Desktop Sidebar - hidden on mobile */}
       <div className="hidden md:block">
         <Sidebar onLogout={handleLogout} />
@@ -25,7 +25,11 @@ export function RootLayout() {
       {/* Main Content Area */}
       <div className="flex-1 min-w-0 md:ml-16 pb-20 md:pb-0">
         {/* Mobile top bar - in normal document flow so it never overlaps page content */}
-        <div className="md:hidden flex items-center justify-between h-12 px-4 border-b border-border bg-background">
+        <div
+          className="md:hidden sticky top-0 z-40 bg-background border-b border-border"
+          style={{ paddingTop: "env(safe-area-inset-top)" }}
+        >
+          <div className="flex items-center justify-between h-12 px-4">
           <Link to="/" className="flex items-center gap-2">
             <CatMark className="w-7 h-7 text-[#9c5434]" counter={false} />
             <span className="text-sm font-semibold text-foreground">C&amp;C's Kitchen</span>
@@ -37,6 +41,7 @@ export function RootLayout() {
           >
             <LogOut className="w-4 h-4" />
           </button>
+        </div>
         </div>
 
         <main className="min-h-screen">

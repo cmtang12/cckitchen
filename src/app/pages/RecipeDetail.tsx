@@ -449,7 +449,7 @@ export function RecipeDetail() {
 
   if (isEditing) {
     return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12 sm:pt-8">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-foreground mb-2">Edit Recipe</h1>
           <p className="text-muted-foreground text-sm">Make changes to your recipe</p>
@@ -849,9 +849,9 @@ export function RecipeDetail() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-12 sm:pt-6">
       {/* Header with Icon CTAs */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-3 sm:mb-6">
         <Link to="/">
           <Button variant="ghost" size="sm" className="rounded-lg -ml-2">
             <ArrowLeft className="w-4 h-4 mr-2" />

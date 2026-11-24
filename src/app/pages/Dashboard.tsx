@@ -139,7 +139,7 @@ export function Dashboard() {
     .slice(0, 8);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12 sm:pt-8">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-foreground mb-1">Stats</h1>
