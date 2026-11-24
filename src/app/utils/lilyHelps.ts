@@ -67,10 +67,36 @@ export function loadLilySkills(): LilySkill[] {
   return DEFAULT_SKILLS;
 }
 
-export function saveLilySkills(skills: LilySkill[]) {
+/**
+ * Saves Lily's skills for every phone (in the database) and keeps a copy on this
+ * phone so they show instantly. Returns false if the database save didn't work.
+ */
+export async function saveLilySkills(skills: LilySkill[]): Promise<boolean> {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(skills));
   } catch {}
+  try {
+    const { settingsAPI } = await import("../services/api");
+    await settingsAPI.set("lily-skills", skills);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Gets the shared list from the database (falls back to this phone's copy). */
+export async function fetchLilySkills(): Promise<LilySkill[]> {
+  try {
+    const { settingsAPI } = await import("../services/api");
+    const saved = await settingsAPI.get<LilySkill[]>("lily-skills");
+    if (Array.isArray(saved)) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+      } catch {}
+      return saved;
+    }
+  } catch {}
+  return loadLilySkills();
 }
 
 // --- Reading a step ---------------------------------------------------------

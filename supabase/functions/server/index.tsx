@@ -351,6 +351,35 @@ app.delete("/make-server-9a4224b7/recipes/:id", async (c) => {
   }
 });
 
+// ===== SETTINGS ROUTES =====
+// Small shared settings (like Lily's skills), saved once for every phone.
+const SETTINGS_KEYS = ["lily-skills"];
+
+app.get("/make-server-9a4224b7/settings/:key", async (c) => {
+  const key = c.req.param("key");
+  if (!SETTINGS_KEYS.includes(key)) return c.json({ error: "Unknown setting" }, 404);
+  try {
+    const value = await kv.get(`settings:${key}`);
+    return c.json({ value: value ?? null });
+  } catch (error) {
+    console.log("Error reading setting:", error);
+    return c.json({ error: "Failed to read setting", details: String(error) }, 500);
+  }
+});
+
+app.put("/make-server-9a4224b7/settings/:key", async (c) => {
+  const key = c.req.param("key");
+  if (!SETTINGS_KEYS.includes(key)) return c.json({ error: "Unknown setting" }, 404);
+  try {
+    const { value } = await c.req.json();
+    await kv.set(`settings:${key}`, value);
+    return c.json({ value });
+  } catch (error) {
+    console.log("Error saving setting:", error);
+    return c.json({ error: "Failed to save setting", details: String(error) }, 500);
+  }
+});
+
 // ===== MEAL PLAN ROUTES =====
 
 // Get all meal plans

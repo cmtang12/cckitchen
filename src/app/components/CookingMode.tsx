@@ -12,6 +12,7 @@ import {
   LilySkill,
   loadLilySkills,
   saveLilySkills,
+  fetchLilySkills,
   readRecipe,
   skillLabel,
   stepMinutes,
@@ -103,9 +104,17 @@ export function CookingMode({ recipe: initialRecipe, onClose, startWithLily = fa
     setTimerRunning(true);
   };
 
-  const updateSkills = (next: LilySkill[]) => {
+  // Lily's skills are shared across phones; refresh from the database on open.
+  useEffect(() => {
+    let alive = true;
+    fetchLilySkills().then((list) => alive && setSkills(list));
+    return () => { alive = false; };
+  }, []);
+
+  const updateSkills = async (next: LilySkill[]) => {
     setSkills(next);
-    saveLilySkills(next);
+    const shared = await saveLilySkills(next);
+    if (!shared) toast("Saved on this phone only for now");
   };
 
   const correctStep = async (index: number, forLily: boolean) => {

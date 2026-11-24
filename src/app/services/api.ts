@@ -284,6 +284,24 @@ export const mealPlanAPI = {
   },
 };
 
+// Shared settings (saved once for every phone)
+export const settingsAPI = {
+  /** Returns null if it was never saved, or the server doesn't have settings yet. */
+  async get<T>(key: string): Promise<T | null> {
+    try {
+      const data = await fetchAPI(`/settings/${key}`);
+      return (data?.value ?? null) as T | null;
+    } catch {
+      return null;
+    }
+  },
+
+  async set<T>(key: string, value: T): Promise<void> {
+    await fetchAPI(`/settings/${key}`, { method: 'PUT', body: JSON.stringify({ value }) });
+    writeCache(`/settings/${key}`, { value });
+  },
+};
+
 // Recipe Extraction API
 export const extractionAPI = {
   async extractFromURL(url: string): Promise<{

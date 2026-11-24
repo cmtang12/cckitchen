@@ -39,7 +39,7 @@ import { COOKING_METHODS, TAGS, TAG_LABELS, CATEGORIES, CATEGORY_LABELS, MEAL_CO
 import { RecipeImage } from "../components/RecipeImage";
 import { hasPhoto } from "../services/recipeImages";
 import { CatMark } from "../components/CatMark";
-import { readRecipe, loadLilySkills } from "../utils/lilyHelps";
+import { readRecipe, loadLilySkills, fetchLilySkills } from "../utils/lilyHelps";
 
 // Shared with every other screen so labels and options always match.
 const cookingMethods = COOKING_METHODS;
@@ -62,6 +62,10 @@ export function RecipeDetail() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showCookingMode, setShowCookingMode] = useState(false);
   const [cookWithLily, setCookWithLily] = useState(false);
+  const [lilySkills, setLilySkills] = useState(loadLilySkills);
+  useEffect(() => {
+    fetchLilySkills().then(setLilySkills);
+  }, [showCookingMode]);
   const [suggestedPairings, setSuggestedPairings] = useState<Recipe[]>([]);
 
   // Edit form state
@@ -853,7 +857,7 @@ export function RecipeDetail() {
     );
   }
 
-  const lilyHelp = readRecipe(recipe, loadLilySkills());
+  const lilyHelp = readRecipe(recipe, lilySkills);
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-12 sm:pt-6">
