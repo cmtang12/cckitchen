@@ -38,6 +38,8 @@ import { toast } from "sonner";
 import { COOKING_METHODS, TAGS, TAG_LABELS, CATEGORIES, CATEGORY_LABELS, MEAL_COMPONENTS, MEAL_COMPONENT_LABELS, CUISINES, CUISINE_LABELS, tagLabel, methodLabel, allTags } from "../utils/recipeOptions";
 import { RecipeImage } from "../components/RecipeImage";
 import { hasPhoto } from "../services/recipeImages";
+import { CatMark } from "../components/CatMark";
+import { readRecipe, loadLilySkills } from "../utils/lilyHelps";
 
 // Shared with every other screen so labels and options always match.
 const cookingMethods = COOKING_METHODS;
@@ -59,6 +61,7 @@ export function RecipeDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showCookingMode, setShowCookingMode] = useState(false);
+  const [cookWithLily, setCookWithLily] = useState(false);
   const [suggestedPairings, setSuggestedPairings] = useState<Recipe[]>([]);
 
   // Edit form state
@@ -850,6 +853,8 @@ export function RecipeDetail() {
     );
   }
 
+  const lilyHelp = readRecipe(recipe, loadLilySkills());
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-12 sm:pt-6">
       {/* Header with Icon CTAs */}
@@ -906,7 +911,12 @@ export function RecipeDetail() {
       {showCookingMode && (
         <CookingMode
           recipe={recipe}
-          onClose={() => setShowCookingMode(false)}
+          startWithLily={cookWithLily}
+          onRecipeChange={setRecipe}
+          onClose={() => {
+            setShowCookingMode(false);
+            setCookWithLily(false);
+          }}
         />
       )}
 
@@ -942,6 +952,23 @@ export function RecipeDetail() {
                 recipe.cookingMethod.map(methodLabel).join(", "),
               ].filter(Boolean).join(" · ")}
             </p>
+
+            {/* Lily helps: how she could help with this recipe */}
+            {lilyHelp.count > 0 && (
+              <button
+                onClick={() => {
+                  setCookWithLily(true);
+                  setShowCookingMode(true);
+                }}
+                className="flex items-center gap-2 text-left text-sm mb-3 text-[#5e8f6f] hover:underline underline-offset-4"
+              >
+                <CatMark className="w-6 h-6 shrink-0" counter={false} />
+                <span>
+                  <span className="font-medium">Lily helps with {lilyHelp.count} {lilyHelp.count === 1 ? "step" : "steps"}</span>
+                  <span className="opacity-80"> · {lilyHelp.summary}</span>
+                </span>
+              </button>
+            )}
 
             {/* Tags */}
             {allTags(recipe).length > 0 && (

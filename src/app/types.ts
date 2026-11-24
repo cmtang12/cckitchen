@@ -37,6 +37,8 @@ export interface Recipe {
   timesCookedLog?: string[]; // Array of ISO date strings when recipe was cooked
   rating?: number; // 1-5 star rating
   recommendedPairings?: string[]; // Recipe IDs that pair well with this recipe
+  /** Lily helps: steps you corrected by hand. index -> true (Lily can do it) / false (not for Lily). */
+  lilySteps?: Record<number, boolean>;
   cuisineTypes?: CuisineType[]; // NEW: Types of cuisine (can be multiple)
 }
 
