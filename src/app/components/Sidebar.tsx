@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { CatMark } from "./CatMark";
+import { ToastMark } from "./ToastMark";
 import { Link, useLocation } from "react-router";
 import {
   BookOpen,
@@ -51,7 +51,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
         {/* Logo / Brand */}
         <div className="h-16 flex items-center px-4 border-b border-border">
           <div className="flex items-center gap-3 overflow-hidden">
-            <CatMark className="w-8 h-8 flex-shrink-0 text-[#9c5434]" counter={false} />
+            <ToastMark className="w-8 h-8 flex-shrink-0 text-[#9c5434]" />
             <span 
               className={`wordmark text-xl whitespace-nowrap transition-opacity duration-300 ${
                 isExpanded ? "opacity-100" : "opacity-0"
