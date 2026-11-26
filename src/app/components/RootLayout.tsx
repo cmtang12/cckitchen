@@ -1,7 +1,7 @@
 import React from "react";
 import { Outlet, Link, useNavigate } from "react-router";
 import { Sidebar } from "./Sidebar";
-import { ToastMark } from "./ToastMark";
+import { CatMark } from "./CatMark";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { Plus, LogOut } from "lucide-react";
 import { logout } from "../utils/auth";
@@ -31,7 +31,7 @@ export function RootLayout() {
         >
           <div className="flex items-center justify-between h-12 px-4">
           <Link to="/" className="flex items-center gap-2">
-            <ToastMark className="w-7 h-7 text-[#9c5434]" />
+            <CatMark className="w-7 h-7 text-[#9c5434]" mood="sleepy" />
             <span className="wordmark text-[22px]">C&amp;C's Kitchen</span>
           </Link>
           <button
